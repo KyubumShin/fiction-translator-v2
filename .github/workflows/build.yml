@@ -46,6 +46,7 @@ jobs:
           pip install pyinstaller
 
       - name: Build sidecar binary
+        shell: bash
         run: |
           cd sidecar
           pyinstaller --onefile --name fiction-translator-sidecar \
