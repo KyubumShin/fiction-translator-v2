@@ -237,6 +237,67 @@ async def pipeline_cancel() -> dict:
     return {"cancelled": True}
 
 
+# --- Export ---
+async def export_chapter_txt_handler(chapter_id: int, target_language: str = "en") -> dict:
+    db = get_db()
+    try:
+        from fiction_translator.services.export_service import export_chapter_txt
+        return export_chapter_txt(db, chapter_id, target_language)
+    finally:
+        db.close()
+
+async def export_chapter_docx_handler(chapter_id: int, target_language: str = "en") -> dict:
+    db = get_db()
+    try:
+        from fiction_translator.services.export_service import export_chapter_docx
+        return export_chapter_docx(db, chapter_id, target_language)
+    finally:
+        db.close()
+
+
+# --- Segments ---
+async def segment_update_translation(segment_id: int, translated_text: str, target_language: str = "en") -> dict:
+    """Update a segment's translation text."""
+    db = get_db()
+    try:
+        from fiction_translator.db.models import Translation
+        translation = db.query(Translation).filter(
+            Translation.segment_id == segment_id,
+            Translation.target_language == target_language,
+        ).first()
+        if not translation:
+            raise ValueError(f"Translation not found for segment {segment_id}")
+        translation.translated_text = translated_text
+        translation.manually_edited = True
+        db.commit()
+        return {"updated": True, "segment_id": segment_id}
+    finally:
+        db.close()
+
+
+# --- Batch Reasoning ---
+async def batch_get_reasoning(batch_id: int) -> dict:
+    """Get CoT reasoning data for a translation batch."""
+    db = get_db()
+    try:
+        from fiction_translator.db.models import TranslationBatch
+        batch = db.query(TranslationBatch).filter(TranslationBatch.id == batch_id).first()
+        if not batch:
+            return {"found": False}
+        return {
+            "found": True,
+            "id": batch.id,
+            "situation_summary": batch.situation_summary,
+            "character_events": batch.character_events,
+            "full_cot_json": batch.full_cot_json,
+            "segment_ids": batch.segment_ids,
+            "review_feedback": batch.review_feedback,
+            "review_iteration": batch.review_iteration,
+        }
+    finally:
+        db.close()
+
+
 # --- Method Registry ---
 def get_all_handlers() -> dict[str, Any]:
     """Return all method name -> handler mappings."""
@@ -266,4 +327,8 @@ def get_all_handlers() -> dict[str, Any]:
         "persona.delete": persona_delete,
         "pipeline.translate_chapter": pipeline_translate_chapter,
         "pipeline.cancel": pipeline_cancel,
+        "segment.update_translation": segment_update_translation,
+        "batch.get_reasoning": batch_get_reasoning,
+        "export.chapter_txt": export_chapter_txt_handler,
+        "export.chapter_docx": export_chapter_docx_handler,
     }

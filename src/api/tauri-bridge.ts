@@ -85,4 +85,18 @@ export const api = {
   translateChapter: (chapterId: number, targetLanguage: string = "en") =>
     rpc("pipeline.translate_chapter", { chapter_id: chapterId, target_language: targetLanguage }),
   cancelPipeline: () => rpc("pipeline.cancel"),
+
+  // Segments
+  updateSegmentTranslation: (segmentId: number, translatedText: string, targetLanguage: string = "en") =>
+    rpc("segment.update_translation", { segment_id: segmentId, translated_text: translatedText, target_language: targetLanguage }),
+
+  // Export
+  exportChapterTxt: (chapterId: number, targetLanguage: string = "en") =>
+    rpc<{ path: string; format: string; size: number }>("export.chapter_txt", { chapter_id: chapterId, target_language: targetLanguage }),
+  exportChapterDocx: (chapterId: number, targetLanguage: string = "en") =>
+    rpc<{ path: string; format: string }>("export.chapter_docx", { chapter_id: chapterId, target_language: targetLanguage }),
+
+  // Batch reasoning
+  getBatchReasoning: (batchId: number) =>
+    rpc<{ found: boolean; situation_summary?: string; character_events?: Record<string, unknown>; full_cot_json?: Record<string, unknown>; review_feedback?: Record<string, unknown> }>("batch.get_reasoning", { batch_id: batchId }),
 };

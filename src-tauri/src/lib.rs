@@ -9,7 +9,7 @@ use tauri::{Manager, State};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    env_logger::init();
+    let _ = env_logger::try_init();
     let app_state = AppState::new();
 
     tauri::Builder::default()
@@ -43,6 +43,16 @@ pub fn run() {
             });
 
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                let handle = window.app_handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let state: State<'_, AppState> = handle.state();
+                    let mut sidecar = state.sidecar.lock().await;
+                    sidecar.stop().await;
+                });
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

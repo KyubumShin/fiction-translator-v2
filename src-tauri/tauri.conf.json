@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "identifier": "com.fiction-translator.v2",
   "build": {
-    "beforeDevCommand": "",
+    "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
@@ -37,13 +37,7 @@
   },
   "plugins": {
     "shell": {
-      "scope": [
-        {
-          "name": "translator-sidecar",
-          "sidecar": true,
-          "args": true
-        }
-      ]
+      "open": true
     }
   }
 }

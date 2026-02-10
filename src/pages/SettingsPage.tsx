@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "@/stores/app-store";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { api } from "@/api/tauri-bridge";
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -15,6 +16,19 @@ export function SettingsPage() {
   });
 
   const [showKeys, setShowKeys] = useState({
+    gemini: false,
+    claude: false,
+    openai: false,
+  });
+
+  const [keysExist, setKeysExist] = useState({
+    gemini: false,
+    claude: false,
+    openai: false,
+  });
+
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState({
     gemini: false,
     claude: false,
     openai: false,
@@ -47,14 +61,67 @@ export function SettingsPage() {
     return `${key.slice(0, 4)}${"•".repeat(Math.min(key.length - 8, 20))}${key.slice(-4)}`;
   };
 
+  useEffect(() => {
+    const loadExistingKeys = async () => {
+      try {
+        const existingKeys = await api.getApiKeys();
+        setKeysExist({
+          gemini: existingKeys.gemini || false,
+          claude: existingKeys.claude || false,
+          openai: existingKeys.openai || false,
+        });
+      } catch (error) {
+        console.error("Failed to load existing keys:", error);
+      }
+    };
+    loadExistingKeys();
+  }, []);
+
   const handleTestConnection = async (provider: string) => {
-    // TODO: Implement API test connection
-    alert(`Testing ${provider} connection... (Not implemented yet)`);
+    const providerKey = provider.toLowerCase() as "gemini" | "claude" | "openai";
+    setTesting({ ...testing, [providerKey]: true });
+
+    try {
+      const result = await api.testProvider(providerKey);
+      if (result.success) {
+        alert(`${provider} connection successful!`);
+      } else {
+        alert(`${provider} connection failed: ${result.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      alert(`${provider} connection failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setTesting({ ...testing, [providerKey]: false });
+    }
   };
 
-  const handleSaveKeys = () => {
-    // TODO: Implement API key storage
-    alert("API keys saved! (Not fully implemented yet)");
+  const handleSaveKeys = async () => {
+    setSaving(true);
+    try {
+      const keysToSave: Record<string, string> = {};
+      if (apiKeys.gemini) keysToSave.gemini = apiKeys.gemini;
+      if (apiKeys.claude) keysToSave.claude = apiKeys.claude;
+      if (apiKeys.openai) keysToSave.openai = apiKeys.openai;
+
+      await api.setApiKeys(keysToSave);
+
+      // Refresh which keys exist
+      const existingKeys = await api.getApiKeys();
+      setKeysExist({
+        gemini: existingKeys.gemini || false,
+        claude: existingKeys.claude || false,
+        openai: existingKeys.openai || false,
+      });
+
+      // Clear the input fields
+      setApiKeys({ gemini: "", claude: "", openai: "" });
+
+      alert("API keys saved successfully!");
+    } catch (error) {
+      alert(`Failed to save API keys: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -103,12 +170,15 @@ export function SettingsPage() {
           <div className="space-y-4">
             {/* Gemini */}
             <div>
-              <label className="block text-sm font-medium mb-2">Google Gemini API Key</label>
+              <label className="block text-sm font-medium mb-2">
+                Google Gemini API Key
+                {keysExist.gemini && <span className="ml-2 text-xs text-green-500">●</span>}
+              </label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
                     type={showKeys.gemini ? "text" : "password"}
-                    placeholder="Enter your Gemini API key"
+                    placeholder={keysExist.gemini ? "Key configured (enter new to update)" : "Enter your Gemini API key"}
                     value={apiKeys.gemini}
                     onChange={(e) => setApiKeys({ ...apiKeys, gemini: e.target.value })}
                   />
@@ -129,21 +199,24 @@ export function SettingsPage() {
                   variant="secondary"
                   size="sm"
                   onClick={() => handleTestConnection("Gemini")}
-                  disabled={!apiKeys.gemini}
+                  disabled={!keysExist.gemini || testing.gemini}
                 >
-                  Test
+                  {testing.gemini ? "Testing..." : "Test"}
                 </Button>
               </div>
             </div>
 
             {/* Claude */}
             <div>
-              <label className="block text-sm font-medium mb-2">Anthropic Claude API Key</label>
+              <label className="block text-sm font-medium mb-2">
+                Anthropic Claude API Key
+                {keysExist.claude && <span className="ml-2 text-xs text-green-500">●</span>}
+              </label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
                     type={showKeys.claude ? "text" : "password"}
-                    placeholder="Enter your Claude API key"
+                    placeholder={keysExist.claude ? "Key configured (enter new to update)" : "Enter your Claude API key"}
                     value={apiKeys.claude}
                     onChange={(e) => setApiKeys({ ...apiKeys, claude: e.target.value })}
                   />
@@ -164,21 +237,24 @@ export function SettingsPage() {
                   variant="secondary"
                   size="sm"
                   onClick={() => handleTestConnection("Claude")}
-                  disabled={!apiKeys.claude}
+                  disabled={!keysExist.claude || testing.claude}
                 >
-                  Test
+                  {testing.claude ? "Testing..." : "Test"}
                 </Button>
               </div>
             </div>
 
             {/* OpenAI */}
             <div>
-              <label className="block text-sm font-medium mb-2">OpenAI API Key</label>
+              <label className="block text-sm font-medium mb-2">
+                OpenAI API Key
+                {keysExist.openai && <span className="ml-2 text-xs text-green-500">●</span>}
+              </label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
                     type={showKeys.openai ? "text" : "password"}
-                    placeholder="Enter your OpenAI API key"
+                    placeholder={keysExist.openai ? "Key configured (enter new to update)" : "Enter your OpenAI API key"}
                     value={apiKeys.openai}
                     onChange={(e) => setApiKeys({ ...apiKeys, openai: e.target.value })}
                   />
@@ -199,16 +275,16 @@ export function SettingsPage() {
                   variant="secondary"
                   size="sm"
                   onClick={() => handleTestConnection("OpenAI")}
-                  disabled={!apiKeys.openai}
+                  disabled={!keysExist.openai || testing.openai}
                 >
-                  Test
+                  {testing.openai ? "Testing..." : "Test"}
                 </Button>
               </div>
             </div>
 
             <div className="pt-2">
-              <Button variant="primary" onClick={handleSaveKeys}>
-                Save API Keys
+              <Button variant="primary" onClick={handleSaveKeys} disabled={saving}>
+                {saving ? "Saving..." : "Save API Keys"}
               </Button>
             </div>
           </div>

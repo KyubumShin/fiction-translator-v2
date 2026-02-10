@@ -36,6 +36,7 @@ impl JsonRpcRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct JsonRpcResponse {
+    #[allow(dead_code)]
     pub jsonrpc: String,
     pub id: Option<u64>,
     pub result: Option<Value>,
@@ -46,6 +47,7 @@ pub struct JsonRpcResponse {
 pub struct JsonRpcError {
     pub code: i64,
     pub message: String,
+    #[allow(dead_code)]
     pub data: Option<Value>,
 }
 

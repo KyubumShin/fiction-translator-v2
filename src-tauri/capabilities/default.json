@@ -1,11 +1,13 @@
 {
-  "$schema": "https://tauri.app/schema/capability.json",
   "identifier": "default",
-  "description": "Default permissions for Fiction Translator",
+  "description": "Default capabilities for Fiction Translator",
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "shell:allow-execute",
-    "shell:allow-open"
+    "shell:default",
+    "shell:allow-open",
+    "core:event:default",
+    "core:event:allow-emit",
+    "core:event:allow-listen"
   ]
 }

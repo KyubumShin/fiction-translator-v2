@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useChapter, useEditorData } from "@/hooks/useChapter";
 import { useProgress } from "@/hooks/useProgress";
 import { SideBySideEditor } from "@/components/editor/SideBySideEditor";
@@ -8,13 +9,16 @@ import { ProgressOverlay } from "@/components/translation/ProgressOverlay";
 import { TranslateButton } from "@/components/translation/TranslateButton";
 import { Button } from "@/components/ui/Button";
 import { LANGUAGES, type LanguageCode } from "@/lib/constants";
+import { api } from "@/api/tauri-bridge";
 
 export function EditorPage() {
   const { chapterId } = useParams<{ chapterId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const id = chapterId ? parseInt(chapterId) : null;
 
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode>("en");
+  const [exporting, setExporting] = useState(false);
 
   const { data: chapter, isLoading: chapterLoading } = useChapter(id);
   const { data: editorData, isLoading: editorLoading } = useEditorData(id, targetLanguage);
@@ -22,14 +26,28 @@ export function EditorPage() {
 
   const isLoading = chapterLoading || editorLoading;
 
-  const handleSegmentEdit = (segmentId: number, newText: string) => {
-    // TODO: Implement segment update API call
-    console.log("Edit segment", segmentId, newText);
+  const handleSegmentEdit = async (segmentId: number, newText: string) => {
+    try {
+      await api.updateSegmentTranslation(segmentId, newText, targetLanguage);
+      // Refetch editor data after edit
+      queryClient.invalidateQueries({ queryKey: ["editor-data", id] });
+    } catch (err) {
+      console.error("Failed to update segment:", err);
+    }
   };
 
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log("Export chapter");
+  const handleExport = async () => {
+    if (!id) return;
+    setExporting(true);
+    try {
+      const result = await api.exportChapterTxt(id, targetLanguage);
+      alert(`Exported to: ${result.path}`);
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (isLoading) {
@@ -95,12 +113,9 @@ export function EditorPage() {
               variant="secondary"
               size="sm"
               onClick={handleExport}
-              disabled={!translatedText}
+              disabled={!translatedText || exporting}
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Export
+              {exporting ? "Exporting..." : "Export"}
             </Button>
           </div>
         </div>

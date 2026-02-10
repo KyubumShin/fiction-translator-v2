@@ -1,22 +1,27 @@
 import { useEditorStore } from "@/stores/editor-store";
 import { cn } from "@/lib/cn";
+import { api } from "@/api/tauri-bridge";
+import { useQuery } from "@tanstack/react-query";
 
 interface CoTReasoningPanelProps {
   chapterId: number;
 }
 
 export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelProps) {
-  const { activeSegmentId, showReasoning, toggleReasoning } = useEditorStore();
+  const { activeSegmentId, showReasoning, toggleReasoning, segmentMap } = useEditorStore();
 
-  // TODO: Fetch reasoning data based on active segment's batch_id
-  const reasoningData = {
-    situation: "Battle scene between warrior and dragon in a fantasy setting.",
-    characterEvents: [
-      "Warrior demonstrates courage by confronting the dragon",
-      "Formal speech pattern suggests high status or nobility",
-    ],
-    translationReasoning: "Used formal register to match the warrior's dignified speech. 'How dare you' captures the indignation while maintaining literary quality.",
-  };
+  // Find batch_id for the active segment
+  const activeSegment = activeSegmentId
+    ? segmentMap.find((entry) => entry.segment_id === activeSegmentId)
+    : null;
+  const batchId = activeSegment?.batch_id;
+
+  // Fetch reasoning data when batch_id is available
+  const { data: reasoningData } = useQuery({
+    queryKey: ["batch-reasoning", batchId],
+    queryFn: () => api.getBatchReasoning(batchId!),
+    enabled: !!batchId,
+  });
 
   if (!activeSegmentId) {
     return null;
@@ -48,32 +53,51 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
 
       {showReasoning && (
         <div className="px-6 py-4 space-y-4 text-sm border-t border-border/50">
-          <div>
-            <h3 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground mb-2">
-              Situation Summary
-            </h3>
-            <p className="text-foreground/90 leading-relaxed">{reasoningData.situation}</p>
-          </div>
+          {!reasoningData?.found ? (
+            <p className="text-muted-foreground italic">No reasoning data available for this segment.</p>
+          ) : (
+            <>
+              {reasoningData.situation_summary && (
+                <div>
+                  <h3 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                    Situation Summary
+                  </h3>
+                  <p className="text-foreground/90 leading-relaxed">{reasoningData.situation_summary}</p>
+                </div>
+              )}
 
-          <div>
-            <h3 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground mb-2">
-              Character Events
-            </h3>
-            <ul className="space-y-1">
-              {reasoningData.characterEvents.map((event, i) => (
-                <li key={i} className="text-foreground/90 leading-relaxed pl-4 relative before:content-['•'] before:absolute before:left-0">
-                  {event}
-                </li>
-              ))}
-            </ul>
-          </div>
+              {reasoningData.character_events && typeof reasoningData.character_events === "object" && Object.keys(reasoningData.character_events).length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                    Character Events
+                  </h3>
+                  <ul className="space-y-1">
+                    {Object.entries(reasoningData.character_events).map(([character, events]) => (
+                      <li key={character} className="text-foreground/90 leading-relaxed">
+                        <span className="font-medium">{character}:</span> {String(events)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-          <div>
-            <h3 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground mb-2">
-              Translation Reasoning
-            </h3>
-            <p className="text-foreground/90 leading-relaxed">{reasoningData.translationReasoning}</p>
-          </div>
+              {reasoningData.review_feedback && typeof reasoningData.review_feedback === "object" && Object.keys(reasoningData.review_feedback).length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                    Review Feedback
+                  </h3>
+                  <div className="space-y-2">
+                    {Object.entries(reasoningData.review_feedback).map(([key, value]) => (
+                      <div key={key}>
+                        <span className="font-medium text-foreground/80">{key}:</span>{" "}
+                        <span className="text-foreground/90">{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>

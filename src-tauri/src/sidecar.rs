@@ -34,7 +34,7 @@ impl SidecarProcess {
         // Try to find sidecar - in dev mode, run Python directly
         let mut cmd = if cfg!(debug_assertions) {
             // Dev mode: run Python module directly
-            let mut c = Command::new("python");
+            let mut c = Command::new("python3.11");
             c.args(["-m", "fiction_translator"]);
             c.current_dir(
                 std::env::current_dir()
