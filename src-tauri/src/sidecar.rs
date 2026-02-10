@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::{oneshot, Mutex, RwLock};
-use log::{info, error, warn};
+use log::info;
 use serde_json::Value;
 
 use tauri::{Emitter, Manager};
