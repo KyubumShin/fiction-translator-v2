@@ -123,6 +123,12 @@ export interface SegmentMapEntry {
   batch_id: number | null;
 }
 
+export interface RetranslateRequest {
+  segment_ids: number[];
+  target_language: string;
+  user_guide: string;
+}
+
 export interface PipelineProgress {
   stage: string;
   progress: number;

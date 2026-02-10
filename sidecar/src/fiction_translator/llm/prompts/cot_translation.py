@@ -15,6 +15,7 @@ def build_cot_translation_prompt(
     personas_context: str = "",
     style_context: str = "",
     review_feedback: list[dict] | None = None,
+    user_guide: str = "",
 ) -> str:
     """Build a CoT batch-translation prompt.
 
@@ -32,6 +33,8 @@ def build_cot_translation_prompt(
         Project-level style preferences.
     review_feedback : list[dict] | None
         Feedback from a previous review iteration to incorporate.
+    user_guide : str
+        User-provided instructions to guide this specific translation.
 
     Returns
     -------
@@ -69,6 +72,14 @@ def build_cot_translation_prompt(
 {style_context}
 """
 
+    # ── User guide section ─────────────────────────────────────────
+    user_guide_section = ""
+    if user_guide:
+        user_guide_section = f"""
+## User Translation Guide
+{user_guide}
+"""
+
     # ── Review feedback section ──────────────────────────────────────
     feedback_section = ""
     if review_feedback:
@@ -94,7 +105,7 @@ def build_cot_translation_prompt(
     return f"""You are an expert literary translator from {src_label} to {tgt_label}.
 
 Translate the following numbered segments using Chain-of-Thought reasoning.
-{glossary_section}{personas_section}{style_section}{feedback_section}
+{glossary_section}{personas_section}{style_section}{user_guide_section}{feedback_section}
 ## Instructions
 1. First, write a brief SITUATION SUMMARY describing the scene context.
 2. Then list CHARACTER EVENTS -- what each character does or feels in this passage.

@@ -8,6 +8,7 @@ interface SideBySideEditorProps {
   translatedText: string;
   segmentMap: SegmentMapEntry[];
   onSegmentEdit?: (segmentId: number, newText: string) => void;
+  onSegmentRetranslate?: (segmentId: number) => void;
 }
 
 export function SideBySideEditor({
@@ -15,6 +16,7 @@ export function SideBySideEditor({
   translatedText,
   segmentMap,
   onSegmentEdit,
+  onSegmentRetranslate,
 }: SideBySideEditorProps) {
   const sourceRef = useRef<HTMLDivElement>(null);
   const translatedRef = useRef<HTMLDivElement>(null);
@@ -89,6 +91,7 @@ export function SideBySideEditor({
                 onSegmentClick={onSegmentClick}
                 onSegmentDoubleClick={onSegmentDoubleClick}
                 onSegmentEdit={onSegmentEdit}
+                onSegmentRetranslate={onSegmentRetranslate}
               />
             </div>
           </>

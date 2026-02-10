@@ -275,6 +275,23 @@ async def segment_update_translation(segment_id: int, translated_text: str, targ
         db.close()
 
 
+# --- Segment Re-translate ---
+async def segment_retranslate(segment_ids: list[int], target_language: str = "en", user_guide: str = "") -> dict:
+    """Re-translate specific segments with user guidance."""
+    db = get_db()
+    try:
+        from fiction_translator.services.segment_service import retranslate_segments
+        return await retranslate_segments(
+            db=db,
+            segment_ids=segment_ids,
+            target_language=target_language,
+            user_guide=user_guide,
+            api_keys=_api_keys,
+        )
+    finally:
+        db.close()
+
+
 # --- Batch Reasoning ---
 async def batch_get_reasoning(batch_id: int) -> dict:
     """Get CoT reasoning data for a translation batch."""
@@ -328,6 +345,7 @@ def get_all_handlers() -> dict[str, Any]:
         "pipeline.translate_chapter": pipeline_translate_chapter,
         "pipeline.cancel": pipeline_cancel,
         "segment.update_translation": segment_update_translation,
+        "segment.retranslate": segment_retranslate,
         "batch.get_reasoning": batch_get_reasoning,
         "export.chapter_txt": export_chapter_txt_handler,
         "export.chapter_docx": export_chapter_docx_handler,

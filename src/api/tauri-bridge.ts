@@ -90,6 +90,10 @@ export const api = {
   updateSegmentTranslation: (segmentId: number, translatedText: string, targetLanguage: string = "en") =>
     rpc("segment.update_translation", { segment_id: segmentId, translated_text: translatedText, target_language: targetLanguage }),
 
+  // Segment re-translate
+  retranslateSegments: (segmentIds: number[], targetLanguage: string, userGuide: string) =>
+    rpc("segment.retranslate", { segment_ids: segmentIds, target_language: targetLanguage, user_guide: userGuide }),
+
   // Export
   exportChapterTxt: (chapterId: number, targetLanguage: string = "en") =>
     rpc<{ path: string; format: string; size: number }>("export.chapter_txt", { chapter_id: chapterId, target_language: targetLanguage }),

@@ -6,9 +6,10 @@ interface ChapterCardProps {
   chapter: Chapter;
   onTranslate: () => void;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
-export function ChapterCard({ chapter, onTranslate, onEdit }: ChapterCardProps) {
+export function ChapterCard({ chapter, onTranslate, onEdit, onDelete }: ChapterCardProps) {
   const progress = chapter.segment_count && chapter.translated_count
     ? (chapter.translated_count / chapter.segment_count) * 100
     : 0;
@@ -63,6 +64,17 @@ export function ChapterCard({ chapter, onTranslate, onEdit }: ChapterCardProps) 
       </div>
 
       <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onDelete}
+          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          title="Delete chapter"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </Button>
         <Button variant="secondary" size="sm" onClick={onEdit}>
           Edit
         </Button>

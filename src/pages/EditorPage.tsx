@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useChapter, useEditorData } from "@/hooks/useChapter";
 import { useProgress } from "@/hooks/useProgress";
 import { SideBySideEditor } from "@/components/editor/SideBySideEditor";
+import { RetranslateDialog } from "@/components/editor/RetranslateDialog";
 import { CoTReasoningPanel } from "@/components/editor/CoTReasoningPanel";
 import { ProgressOverlay } from "@/components/translation/ProgressOverlay";
 import { TranslateButton } from "@/components/translation/TranslateButton";
@@ -19,6 +20,7 @@ export function EditorPage() {
 
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode>("en");
   const [exporting, setExporting] = useState(false);
+  const [retranslateSegmentId, setRetranslateSegmentId] = useState<number | null>(null);
 
   const { data: chapter, isLoading: chapterLoading } = useChapter(id);
   const { data: editorData, isLoading: editorLoading } = useEditorData(id, targetLanguage);
@@ -50,6 +52,16 @@ export function EditorPage() {
     }
   };
 
+  const handleRetranslate = (segmentId: number) => {
+    setRetranslateSegmentId(segmentId);
+  };
+
+  const handleRetranslateSubmit = async (userGuide: string) => {
+    if (retranslateSegmentId === null) return;
+    await api.retranslateSegments([retranslateSegmentId], targetLanguage, userGuide);
+    queryClient.invalidateQueries({ queryKey: ["editor-data", id] });
+  };
+
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -69,6 +81,17 @@ export function EditorPage() {
   const sourceText = editorData?.source_connected_text || chapter.source_content || "";
   const translatedText = editorData?.translated_connected_text || chapter.translated_content || "";
   const segmentMap = editorData?.segment_map || [];
+
+  // Find segment data for the retranslate dialog
+  const retranslateSegment = retranslateSegmentId !== null
+    ? segmentMap.find((s) => s.segment_id === retranslateSegmentId)
+    : null;
+  const retranslateSourceText = retranslateSegment
+    ? sourceText.slice(retranslateSegment.source_start, retranslateSegment.source_end)
+    : "";
+  const retranslateCurrentTranslation = retranslateSegment
+    ? translatedText.slice(retranslateSegment.translated_start, retranslateSegment.translated_end)
+    : "";
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -129,6 +152,7 @@ export function EditorPage() {
             translatedText={translatedText}
             segmentMap={segmentMap}
             onSegmentEdit={handleSegmentEdit}
+            onSegmentRetranslate={handleRetranslate}
           />
           <CoTReasoningPanel chapterId={id!} />
         </>
@@ -149,6 +173,15 @@ export function EditorPage() {
 
       {/* Progress Overlay */}
       {isRunning && <ProgressOverlay />}
+
+      {/* Re-translate Dialog */}
+      <RetranslateDialog
+        open={retranslateSegmentId !== null}
+        onClose={() => setRetranslateSegmentId(null)}
+        sourceText={retranslateSourceText}
+        currentTranslation={retranslateCurrentTranslation}
+        onRetranslate={handleRetranslateSubmit}
+      />
     </div>
   );
 }
