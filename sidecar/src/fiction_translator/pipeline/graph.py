@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any
 
 from langgraph.graph import StateGraph, END
+from sqlalchemy.sql import func
 
 from fiction_translator.pipeline.state import TranslationState
 from fiction_translator.pipeline.callbacks import notify
@@ -242,28 +243,119 @@ async def finalize_node(state: TranslationState) -> dict:
 
         # Save persona suggestions
         persona_suggestions = state.get("persona_suggestions", [])
-        for suggestion in persona_suggestions:
-            persona_id = suggestion.get("persona_id")
-            if persona_id is None:
-                # Create new persona for unknown character
-                new_persona = Persona(
-                    project_id=chapter.project_id,
-                    name=suggestion.get("name", "Unknown"),
-                    auto_detected=True,
-                    detection_confidence=suggestion.get("confidence"),
-                )
-                db.add(new_persona)
-                db.flush()
-                persona_id = new_persona.id
 
-            db_suggestion = PersonaSuggestion(
-                persona_id=persona_id,
-                field_name=suggestion.get("field", ""),
-                suggested_value=suggestion.get("value", ""),
-                confidence=suggestion.get("confidence"),
-                status="pending",
-            )
-            db.add(db_suggestion)
+        # Track personas created in this batch to avoid duplicates
+        created_personas: dict[str, int] = {}
+
+        # Group suggestions by character name for efficient processing
+        suggestions_by_name: dict[str, list] = {}
+        for suggestion in persona_suggestions:
+            name = suggestion.get("name", "Unknown")
+            if name not in suggestions_by_name:
+                suggestions_by_name[name] = []
+            suggestions_by_name[name].append(suggestion)
+
+        # Process each character's suggestions
+        for char_name, char_suggestions in suggestions_by_name.items():
+            persona_id = None
+            persona = None
+
+            # Check if any suggestion already has a persona_id
+            for suggestion in char_suggestions:
+                if suggestion.get("persona_id") is not None:
+                    persona_id = suggestion.get("persona_id")
+                    persona = db.query(Persona).filter(Persona.id == persona_id).first()
+                    break
+
+            # If no existing persona_id, look for or create persona
+            if persona_id is None:
+                name_lower = char_name.lower()
+
+                # Check local batch cache first
+                if name_lower in created_personas:
+                    persona_id = created_personas[name_lower]
+                    persona = db.query(Persona).filter(Persona.id == persona_id).first()
+                else:
+                    # Query DB for existing persona by name (case-insensitive)
+                    persona = db.query(Persona).filter(
+                        Persona.project_id == chapter.project_id,
+                        func.lower(Persona.name) == name_lower
+                    ).first()
+
+                    # Also check aliases in existing personas
+                    if not persona:
+                        personas_with_aliases = db.query(Persona).filter(
+                            Persona.project_id == chapter.project_id,
+                            Persona.aliases.isnot(None)
+                        ).all()
+
+                        for p in personas_with_aliases:
+                            if p.aliases and isinstance(p.aliases, list):
+                                if any(alias.lower() == name_lower for alias in p.aliases):
+                                    persona = p
+                                    break
+
+                    # Create new persona if not found
+                    if not persona:
+                        # Get first suggestion's confidence for persona creation
+                        first_confidence = char_suggestions[0].get("confidence")
+
+                        persona = Persona(
+                            project_id=chapter.project_id,
+                            name=char_name,
+                            auto_detected=True,
+                            detection_confidence=first_confidence,
+                        )
+                        db.add(persona)
+                        db.flush()
+                        created_personas[name_lower] = persona.id
+
+                    persona_id = persona.id
+
+            # Process all suggestions for this character
+            for suggestion in char_suggestions:
+                field_name = suggestion.get("field", "")
+                suggested_value = suggestion.get("value", "")
+                confidence = suggestion.get("confidence")
+
+                # Auto-apply suggestions to auto-detected personas
+                if persona and persona.auto_detected:
+                    if field_name == "personality":
+                        persona.personality = suggested_value
+                    elif field_name == "speech_style":
+                        persona.speech_style = suggested_value
+                    elif field_name == "formality_level":
+                        # Convert to int if it's a string number
+                        try:
+                            persona.formality_level = int(suggested_value)
+                        except (ValueError, TypeError):
+                            pass
+                    elif field_name == "aliases":
+                        # Add to aliases list (avoid duplicates)
+                        if not persona.aliases:
+                            persona.aliases = []
+                        if suggested_value and suggested_value not in persona.aliases:
+                            persona.aliases = persona.aliases + [suggested_value]
+
+                    # Create suggestion record with auto_applied status
+                    db_suggestion = PersonaSuggestion(
+                        persona_id=persona_id,
+                        field_name=field_name,
+                        suggested_value=suggested_value,
+                        confidence=confidence,
+                        status="auto_applied",
+                    )
+                else:
+                    # Create pending suggestion for manually-created personas
+                    db_suggestion = PersonaSuggestion(
+                        persona_id=persona_id,
+                        field_name=field_name,
+                        suggested_value=suggested_value,
+                        confidence=confidence,
+                        status="pending",
+                    )
+
+                db.add(db_suggestion)
 
         # Save unknown terms as auto-detected glossary entries
         unknown_terms = state.get("unknown_terms", [])
