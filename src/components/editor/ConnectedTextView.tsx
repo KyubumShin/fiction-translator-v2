@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, Fragment } from "react";
 import { cn } from "@/lib/cn";
 import { InlineEditor } from "./InlineEditor";
 import type { SegmentMapEntry } from "@/api/types";
@@ -124,7 +124,7 @@ export function ConnectedTextView({
 
   return (
     <div ref={containerRef} className="relative prose prose-slate dark:prose-invert max-w-none">
-      <div className="leading-relaxed text-[15px] whitespace-pre-wrap" style={{ lineHeight: "1.8" }}>
+      <div className="leading-relaxed text-[15px]" style={{ lineHeight: "1.8" }}>
         {segments.map((segment) => (
           <span
             key={segment.id}
@@ -138,7 +138,14 @@ export function ConnectedTextView({
               side === "source" && "text-muted-foreground/90"
             )}
           >
-            {segment.text}
+            {segment.text.split('\n').map((line, i, arr) => (
+              <Fragment key={i}>
+                {line}
+                {i < arr.length - 1 && (
+                  <span className="block mt-3" />
+                )}
+              </Fragment>
+            ))}
           </span>
         ))}
       </div>

@@ -5,12 +5,14 @@ import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from "
 import { usePersonas, useCreatePersona, useUpdatePersona, useDeletePersona } from "@/hooks/usePersonas";
 import { PersonaSummaryCard } from "./PersonaSummaryCard";
 import type { Persona } from "@/api/types";
+import { languageName } from "@/lib/formatters";
 
 interface PersonaPanelProps {
   projectId: number;
+  sourceLanguage?: string;
 }
 
-export function PersonaPanel({ projectId }: PersonaPanelProps) {
+export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
   const { data: personas, isLoading } = usePersonas(projectId);
   const createPersona = useCreatePersona();
   const updatePersona = useUpdatePersona();
@@ -18,6 +20,7 @@ export function PersonaPanel({ projectId }: PersonaPanelProps) {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
+  const [deletingPersonaId, setDeletingPersonaId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -75,10 +78,19 @@ export function PersonaPanel({ projectId }: PersonaPanelProps) {
     setIsDialogOpen(false);
   };
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Delete this persona?")) {
-      await deletePersona.mutateAsync(id);
+  const handleDeleteRequest = (id: number) => {
+    setDeletingPersonaId(id);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deletingPersonaId === null) return;
+    try {
+      await deletePersona.mutateAsync(deletingPersonaId);
       setIsDialogOpen(false);
+    } catch (err) {
+      console.error("Failed to delete persona:", err);
+    } finally {
+      setDeletingPersonaId(null);
     }
   };
 
@@ -108,7 +120,7 @@ export function PersonaPanel({ projectId }: PersonaPanelProps) {
                 key={persona.id}
                 persona={persona}
                 onEdit={() => handleEdit(persona)}
-                onDelete={() => handleDelete(persona.id)}
+                onDelete={() => handleDeleteRequest(persona.id)}
               />
             ))}
           </div>
@@ -121,6 +133,11 @@ export function PersonaPanel({ projectId }: PersonaPanelProps) {
         </DialogHeader>
         <DialogContent>
           <div className="space-y-4">
+            {sourceLanguage && (
+              <div className="px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 text-sm text-primary">
+                Write persona details in <span className="font-semibold">{languageName(sourceLanguage)}</span> (source language) for best translation results.
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium mb-1.5">Name *</label>
               <Input
@@ -200,7 +217,7 @@ export function PersonaPanel({ projectId }: PersonaPanelProps) {
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => handleDelete(editingPersona.id)}
+              onClick={() => handleDeleteRequest(editingPersona.id)}
             >
               Delete
             </Button>
@@ -211,6 +228,25 @@ export function PersonaPanel({ projectId }: PersonaPanelProps) {
           </Button>
           <Button variant="primary" size="sm" onClick={handleSubmit}>
             {editingPersona ? "Update" : "Add"}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      <Dialog open={deletingPersonaId !== null} onClose={() => setDeletingPersonaId(null)}>
+        <DialogHeader>
+          <DialogTitle>Delete Persona</DialogTitle>
+        </DialogHeader>
+        <DialogContent>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete this persona? This action cannot be undone.
+          </p>
+        </DialogContent>
+        <DialogFooter>
+          <Button variant="secondary" size="sm" onClick={() => setDeletingPersonaId(null)}>
+            Cancel
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteConfirm}>
+            Delete
           </Button>
         </DialogFooter>
       </Dialog>

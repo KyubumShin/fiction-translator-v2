@@ -189,7 +189,7 @@ export function ProjectPage() {
 
           {activeTab === "personas" && (
             <div className="h-full border border-border rounded-xl overflow-hidden bg-background">
-              <PersonaPanel projectId={projectId!} />
+              <PersonaPanel projectId={projectId!} sourceLanguage={project.source_language} />
             </div>
           )}
         </div>
