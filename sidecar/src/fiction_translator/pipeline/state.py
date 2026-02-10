@@ -84,6 +84,9 @@ class TranslationState(TypedDict, total=False):
     # ── Persona learning ─────────────────────────────────────────────
     persona_suggestions: list[dict]
 
+    # ── Unknown terms ─────────────────────────────────────────────────
+    unknown_terms: list[dict]
+
     # ── Output ───────────────────────────────────────────────────────
     connected_translated_text: str
     segment_map: list[dict]

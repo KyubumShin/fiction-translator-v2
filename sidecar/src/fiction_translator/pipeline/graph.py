@@ -130,7 +130,7 @@ async def finalize_node(state: TranslationState) -> dict:
     from fiction_translator.db.session import get_db
     from fiction_translator.db.models import (
         Chapter, Segment, Translation, TranslationBatch,
-        TranslationStatus, PersonaSuggestion,
+        TranslationStatus, PersonaSuggestion, Persona, GlossaryEntry,
     )
 
     db = get_db()
@@ -197,8 +197,9 @@ async def finalize_node(state: TranslationState) -> dict:
                 )
                 db.add(db_trans)
 
-        # Save translation batches
+        # Save translation batches and build batch_order -> db_id mapping
         batches = state.get("batches", [])
+        batch_order_to_id: dict[int, int] = {}
         for batch_data in batches:
             db_batch = TranslationBatch(
                 chapter_id=chapter_id,
@@ -216,20 +217,75 @@ async def finalize_node(state: TranslationState) -> dict:
                 review_iteration=batch_data.get("review_iteration", 0),
             )
             db.add(db_batch)
+            db.flush()
+            batch_order_to_id[batch_data.get("batch_order", 0)] = db_batch.id
+
+        # Link translations to their batch records
+        if batch_order_to_id:
+            # Build segment_order -> batch_db_id mapping from batch data
+            seg_to_batch_db_id: dict[int, int] = {}
+            for batch_data in batches:
+                db_batch_id = batch_order_to_id.get(batch_data.get("batch_order", 0))
+                if db_batch_id:
+                    for seg_id in (batch_data.get("segment_ids") or []):
+                        seg_to_batch_db_id[seg_id] = db_batch_id
+
+            # Update translations with correct batch_id
+            for trans in db.query(Translation).filter(
+                Translation.segment_id.in_(
+                    db.query(Segment.id).filter(Segment.chapter_id == chapter_id)
+                )
+            ).all():
+                seg = db.query(Segment).filter(Segment.id == trans.segment_id).first()
+                if seg and seg.order in seg_to_batch_db_id:
+                    trans.batch_id = seg_to_batch_db_id[seg.order]
 
         # Save persona suggestions
         persona_suggestions = state.get("persona_suggestions", [])
         for suggestion in persona_suggestions:
             persona_id = suggestion.get("persona_id")
-            if persona_id is not None:
-                db_suggestion = PersonaSuggestion(
-                    persona_id=persona_id,
-                    field_name=suggestion.get("field", ""),
-                    suggested_value=suggestion.get("value", ""),
-                    confidence=suggestion.get("confidence"),
-                    status="pending",
+            if persona_id is None:
+                # Create new persona for unknown character
+                new_persona = Persona(
+                    project_id=chapter.project_id,
+                    name=suggestion.get("name", "Unknown"),
+                    auto_detected=True,
+                    detection_confidence=suggestion.get("confidence"),
                 )
-                db.add(db_suggestion)
+                db.add(new_persona)
+                db.flush()
+                persona_id = new_persona.id
+
+            db_suggestion = PersonaSuggestion(
+                persona_id=persona_id,
+                field_name=suggestion.get("field", ""),
+                suggested_value=suggestion.get("value", ""),
+                confidence=suggestion.get("confidence"),
+                status="pending",
+            )
+            db.add(db_suggestion)
+
+        # Save unknown terms as auto-detected glossary entries
+        unknown_terms = state.get("unknown_terms", [])
+        if unknown_terms:
+            existing_terms = {
+                e.source_term.lower()
+                for e in db.query(GlossaryEntry).filter(
+                    GlossaryEntry.project_id == chapter.project_id
+                ).all()
+            }
+            for term in unknown_terms:
+                source = term.get("source_term", "").strip()
+                translated = term.get("translated_term", "").strip()
+                if source and translated and source.lower() not in existing_terms:
+                    db.add(GlossaryEntry(
+                        project_id=chapter.project_id,
+                        source_term=source,
+                        translated_term=translated,
+                        term_type=term.get("term_type", "general"),
+                        auto_detected=True,
+                    ))
+                    existing_terms.add(source.lower())
 
         db.commit()
 

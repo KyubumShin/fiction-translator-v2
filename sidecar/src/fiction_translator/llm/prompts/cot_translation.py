@@ -98,7 +98,8 @@ Translate the following numbered segments using Chain-of-Thought reasoning.
 ## Instructions
 1. First, write a brief SITUATION SUMMARY describing the scene context.
 2. Then list CHARACTER EVENTS -- what each character does or feels in this passage.
-3. Finally, provide the TRANSLATION for each segment.
+3. Identify any UNKNOWN TERMS -- source-language words that are proper nouns, special terminology, skills, items, place names, or organization names that should be added to a glossary for consistency.
+4. Finally, provide the TRANSLATION for each segment.
 
 Rules:
 - Preserve the literary tone and style of the original.
@@ -113,6 +114,9 @@ Return ONLY valid JSON in this exact format:
   "situation_summary": "Brief scene description",
   "character_events": [
     {{"character": "name", "event": "what they do/feel"}}
+  ],
+  "unknown_terms": [
+    {{"source_term": "original word", "translated_term": "translated word", "term_type": "name|place|item|skill|organization|general"}}
   ],
   "translations": [
     {{"segment_id": 1, "text": "translated text"}}

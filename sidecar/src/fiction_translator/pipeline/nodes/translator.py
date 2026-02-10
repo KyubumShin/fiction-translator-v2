@@ -89,6 +89,7 @@ async def translator_node(state: TranslationState) -> dict:
 
     all_batches: list[BatchData] = []
     new_translations: list[TranslatedSegment] = []
+    all_unknown_terms: list[dict] = []
     total_tokens = state.get("total_tokens", 0)
     total_cost = state.get("total_cost", 0.0)
 
@@ -158,6 +159,7 @@ async def translator_node(state: TranslationState) -> dict:
         situation_summary = result.get("situation_summary", "")
         character_events = result.get("character_events", [])
         translations_raw = result.get("translations", [])
+        unknown_terms_raw = result.get("unknown_terms", [])
 
         # Build a lookup of translations by segment_id
         trans_lookup: dict[int, str] = {}
@@ -185,6 +187,11 @@ async def translator_node(state: TranslationState) -> dict:
                 translated_end_offset=0,
                 batch_id=batch_idx,
             ))
+
+        # Collect unknown terms from this batch
+        for term in unknown_terms_raw:
+            if term.get("source_term") and term.get("translated_term"):
+                all_unknown_terms.append(term)
 
         # Store batch data
         all_batches.append(BatchData(
@@ -219,6 +226,7 @@ async def translator_node(state: TranslationState) -> dict:
     return {
         "batches": all_batches,
         "translated_segments": final_translations,
+        "unknown_terms": all_unknown_terms,
         "total_tokens": total_tokens,
         "total_cost": total_cost,
     }
