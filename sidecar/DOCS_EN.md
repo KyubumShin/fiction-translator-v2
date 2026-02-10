@@ -94,10 +94,11 @@ sidecar/
 ├── build.py                    # PyInstaller build script for binary distribution
 └── src/fiction_translator/
     ├── main.py                 # Entry point: initializes DB, starts IPC server
+    ├── __main__.py             # Entry point for `python -m fiction_translator`
     ├── ipc/                    # JSON-RPC communication layer
     │   ├── protocol.py         # Message types (Request, Response, Notification, Error)
     │   ├── server.py           # Async server loop (stdin → handler → stdout)
-    │   └── handlers.py         # 25 method handlers (project.*, chapter.*, pipeline.*, etc.)
+    │   └── handlers.py         # 29 method handlers (project.*, chapter.*, pipeline.*, etc.)
     ├── db/                     # Database layer (SQLAlchemy 2.0)
     │   ├── models.py           # 10 tables: Project, Chapter, Segment, Translation, etc.
     │   └── session.py          # Engine creation, session factory, init_db()
@@ -239,7 +240,7 @@ send_notification → JsonRpcNotification → _write → stdout (parallel)
 
 #### `handlers.py` — Method Router
 
-Registers 25 RPC methods organized by domain. Each handler:
+Registers 29 RPC methods organized by domain. Each handler:
 1. Opens a DB session with `get_db()`
 2. Calls a service function
 3. Closes the session
@@ -415,12 +416,39 @@ Registers 25 RPC methods organized by domain. Each handler:
 - Cancel running pipeline (TODO: not yet implemented)
 - Returns `{"cancelled": true}`
 
+**Export methods:**
+
+**`async export_chapter_txt_handler(chapter_id: int, target_language: str = "en") -> dict`**
+- Export chapter as plain text file
+- Calls `export_service.export_chapter_txt()`
+- Returns `{"path": str, "format": "txt", "size": int}`
+
+**`async export_chapter_docx_handler(chapter_id: int, target_language: str = "en") -> dict`**
+- Export chapter as DOCX file
+- Calls `export_service.export_chapter_docx()`
+- Returns `{"path": str, "format": "docx"}`
+
+**Segment methods:**
+
+**`async segment_update_translation(segment_id: int, translated_text: str, target_language: str = "en") -> dict`**
+- Update a segment's translation text directly
+- Sets `manually_edited = True` to protect from re-translation
+- Raises `ValueError` if translation not found
+- Returns `{"updated": true, "segment_id": int}`
+
+**Batch methods:**
+
+**`async batch_get_reasoning(batch_id: int) -> dict`**
+- Get Chain-of-Thought reasoning data for a translation batch
+- Returns batch details if found: `{"found": true, "id": int, "situation_summary": str, "character_events": dict, "full_cot_json": dict, "segment_ids": list, "review_feedback": dict, "review_iteration": int}`
+- Returns `{"found": false}` if batch not found
+
 **Method registry:**
 
 **`get_all_handlers() -> dict[str, Any]`**
 - Returns dict mapping method names to handler functions
 - Called by `JsonRpcServer.run()` during startup
-- 25 methods total organized by domain:
+- 29 methods total organized by domain:
   - Health: `health.check`
   - Config: `config.set_keys`, `config.get_keys`, `config.test_provider`
   - Projects: `project.list`, `project.create`, `project.get`, `project.update`, `project.delete`
@@ -428,6 +456,9 @@ Registers 25 RPC methods organized by domain. Each handler:
   - Glossary: `glossary.list`, `glossary.create`, `glossary.update`, `glossary.delete`
   - Personas: `persona.list`, `persona.create`, `persona.update`, `persona.delete`
   - Pipeline: `pipeline.translate_chapter`, `pipeline.cancel`
+  - Segments: `segment.update_translation`
+  - Batches: `batch.get_reasoning`
+  - Export: `export.chapter_txt`, `export.chapter_docx`
 
 ### 2. Database Layer (`db/`)
 
@@ -1793,6 +1824,118 @@ python build.py  # Uses PyInstaller
 - Backup: `cp ~/.fiction-translator/data.db ~/.fiction-translator/data.db.backup`
 - Reset: `rm ~/.fiction-translator/data.db` (will recreate on next startup)
 - Migrate: (Future) Use Alembic migrations
+
+## Application Architecture Flow
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Tauri Desktop App                     │
+│  ┌───────────────────────┐  ┌────────────────────────┐  │
+│  │    React Frontend     │  │     Rust Shell         │  │
+│  │  (Vite + TypeScript)  │  │   (Tauri v2 Core)     │  │
+│  │                       │  │                        │  │
+│  │  ┌─────────────────┐  │  │  ┌──────────────────┐  │  │
+│  │  │  Pages:          │  │  │  │  Commands:        │  │  │
+│  │  │  - ProjectList   │  │  │  │  - rpc_call       │  │  │
+│  │  │  - EditorPage    │  │  │  │  - sidecar_status │  │  │
+│  │  │  - SettingsPage  │  │  │  └──────────────────┘  │  │
+│  │  └─────────────────┘  │  │  ┌──────────────────┐  │  │
+│  │  ┌─────────────────┐  │  │  │  Sidecar Manager  │  │  │
+│  │  │  Components:     │  │  │  │  - start/stop     │  │  │
+│  │  │  - SegmentEditor │  │  │  │  - health check   │  │  │
+│  │  │  - CoTPanel      │  │  │  │  - JSON-RPC call  │  │  │
+│  │  │  - ExportButton  │  │  │  └──────────────────┘  │  │
+│  │  └─────────────────┘  │  │           │              │  │
+│  │  ┌─────────────────┐  │  │           │ stdin/stdout │  │
+│  │  │  API Bridge      │──│──│───────────┘              │  │
+│  │  │  (tauri-bridge)  │  │  │                        │  │
+│  │  └─────────────────┘  │  │                        │  │
+│  └───────────────────────┘  └────────────────────────┘  │
+└─────────────────────────────┬───────────────────────────┘
+                              │ JSON-RPC 2.0 (stdin/stdout)
+┌─────────────────────────────┴───────────────────────────┐
+│                   Python Sidecar                         │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  IPC Layer (JsonRpcServer)                         │  │
+│  │  29 methods: health, config, project, chapter,     │  │
+│  │  glossary, persona, pipeline, segment, batch,      │  │
+│  │  export                                            │  │
+│  └──────────────────────┬─────────────────────────────┘  │
+│                         │                                 │
+│  ┌──────────────────────┴─────────────────────────────┐  │
+│  │  Services Layer                                     │  │
+│  │  project / chapter / glossary / persona / export    │  │
+│  └──────────────────────┬─────────────────────────────┘  │
+│                         │                                 │
+│  ┌──────────────────────┴─────────────────────────────┐  │
+│  │  Pipeline Layer (LangGraph)                         │  │
+│  │                                                     │  │
+│  │  load_context ──► segment ──► extract_characters    │  │
+│  │       │                            │                │  │
+│  │       │                      ┌─────▼──────┐         │  │
+│  │       │                      │  validate   │         │  │
+│  │       │                      └──┬─────┬───┘         │  │
+│  │       │              retry ◄────┘     │ pass        │  │
+│  │       │              (max 3)          ▼             │  │
+│  │       │                         ┌──────────┐        │  │
+│  │       │                         │ translate │        │  │
+│  │       │                         └────┬─────┘        │  │
+│  │       │                              ▼              │  │
+│  │       │                         ┌──────────┐        │  │
+│  │       │              retry ◄────┤  review  │        │  │
+│  │       │              (max 2)    └────┬─────┘        │  │
+│  │       │                              │ pass         │  │
+│  │       │                              ▼              │  │
+│  │       │                      learn_personas         │  │
+│  │       │                              │              │  │
+│  │       │                              ▼              │  │
+│  │       │                         finalize ──► END    │  │
+│  │       │                                             │  │
+│  └───────┴─────────────────────────────────────────────┘  │
+│                         │                                 │
+│  ┌──────────────────────┴─────────────────────────────┐  │
+│  │  LLM Layer                                          │  │
+│  │  Gemini / Claude / OpenAI                           │  │
+│  └────────────────────────────────────────────────────┘  │
+│                         │                                 │
+│  ┌──────────────────────┴─────────────────────────────┐  │
+│  │  Database Layer (SQLAlchemy + SQLite)                │  │
+│  │  10 tables: Project, Chapter, Segment, Translation, │  │
+│  │  TranslationBatch, GlossaryEntry, Persona,          │  │
+│  │  PersonaSuggestion, PipelineRun, Export              │  │
+│  └────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
+
+## Changelog
+
+### Session 2025-02-10
+
+**Features wired (frontend ↔ backend):**
+
+1. **Settings Page API Keys** — Wired `SettingsPage.tsx` to save/load/test API keys via `config.set_keys`, `config.get_keys`, `config.test_provider`. Added loading states and green indicator dots for configured providers.
+
+2. **Segment Editing** — Added `segment.update_translation` RPC method + `updateSegmentTranslation()` in `tauri-bridge.ts`. Editor page `handleSegmentEdit` now persists edits to DB with `manually_edited=True` protection.
+
+3. **Export Functionality** — Added `export.chapter_txt` and `export.chapter_docx` RPC methods + `exportChapterTxt()` / `exportChapterDocx()` in `tauri-bridge.ts`. Editor page export button triggers TXT download with loading state.
+
+4. **CoT Reasoning Panel** — Added `batch.get_reasoning` RPC method + `getBatchReasoning()` in `tauri-bridge.ts`. `CoTReasoningPanel.tsx` now fetches real batch reasoning data (situation_summary, character_events, review_feedback) via `useQuery`.
+
+**Bug fixes:**
+
+5. **Rust Build Warnings** — Added `#[allow(dead_code)]` annotations to unused structs in `events.rs` and unused fields in `ipc.rs`.
+
+6. **Sidecar Startup Fix** — Created `__main__.py` to enable `python -m fiction_translator` module execution. Without this file, the sidecar process couldn't start, causing a 120s health check timeout.
+
+**Files modified:**
+- `src/pages/SettingsPage.tsx` — API key save/load/test wiring
+- `src/pages/EditorPage.tsx` — Segment edit + export wiring
+- `src/components/editor/CoTReasoningPanel.tsx` — Real batch reasoning data
+- `src/api/tauri-bridge.ts` — 4 new API methods
+- `sidecar/src/fiction_translator/ipc/handlers.py` — 4 new RPC handlers
+- `sidecar/src/fiction_translator/__main__.py` — NEW: module entry point
+- `src-tauri/src/events.rs` — Dead code annotations
+- `src-tauri/src/ipc.rs` — Dead code annotations
 
 ---
 

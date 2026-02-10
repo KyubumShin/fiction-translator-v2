@@ -94,10 +94,11 @@ sidecar/
 ├── build.py                    # 바이너리 배포를 위한 PyInstaller 빌드 스크립트
 └── src/fiction_translator/
     ├── main.py                 # 진입점: DB 초기화, IPC 서버 시작
+    ├── __main__.py             # `python -m fiction_translator` 진입점
     ├── ipc/                    # JSON-RPC 통신 계층
     │   ├── protocol.py         # 메시지 타입 (Request, Response, Notification, Error)
     │   ├── server.py           # 비동기 서버 루프 (stdin → handler → stdout)
-    │   └── handlers.py         # 25개 메서드 핸들러 (project.*, chapter.*, pipeline.*, 등)
+    │   └── handlers.py         # 29개 메서드 핸들러 (project.*, chapter.*, pipeline.*, 등)
     ├── db/                     # 데이터베이스 계층 (SQLAlchemy 2.0)
     │   ├── models.py           # 10개 테이블: Project, Chapter, Segment, Translation, 등
     │   └── session.py          # 엔진 생성, 세션 팩토리, init_db()
@@ -239,7 +240,7 @@ send_notification → JsonRpcNotification → _write → stdout (병렬)
 
 #### `handlers.py` — 메서드 라우터
 
-도메인별로 구성된 25개 RPC 메서드 등록. 각 핸들러:
+도메인별로 구성된 29개 RPC 메서드 등록. 각 핸들러:
 1. `get_db()`로 DB 세션 열기
 2. 서비스 함수 호출
 3. 세션 닫기
@@ -415,12 +416,39 @@ send_notification → JsonRpcNotification → _write → stdout (병렬)
 - 실행 중인 파이프라인 취소 (TODO: 아직 구현되지 않음)
 - `{"cancelled": true}` 반환
 
+**내보내기 메서드:**
+
+**`async export_chapter_txt_handler(chapter_id: int, target_language: str = "en") -> dict`**
+- 챕터를 일반 텍스트 파일로 내보내기
+- `export_service.export_chapter_txt()` 호출
+- `{"path": str, "format": "txt", "size": int}` 반환
+
+**`async export_chapter_docx_handler(chapter_id: int, target_language: str = "en") -> dict`**
+- 챕터를 DOCX 파일로 내보내기
+- `export_service.export_chapter_docx()` 호출
+- `{"path": str, "format": "docx"}` 반환
+
+**세그먼트 메서드:**
+
+**`async segment_update_translation(segment_id: int, translated_text: str, target_language: str = "en") -> dict`**
+- 세그먼트의 번역 텍스트를 직접 업데이트
+- 재번역으로부터 보호하기 위해 `manually_edited = True` 설정
+- 번역을 찾을 수 없으면 `ValueError` 발생
+- `{"updated": true, "segment_id": int}` 반환
+
+**배치 메서드:**
+
+**`async batch_get_reasoning(batch_id: int) -> dict`**
+- 번역 배치의 Chain-of-Thought 추론 데이터 가져오기
+- 찾으면 배치 세부정보 반환: `{"found": true, "id": int, "situation_summary": str, "character_events": dict, "full_cot_json": dict, "segment_ids": list, "review_feedback": dict, "review_iteration": int}`
+- 배치를 찾을 수 없으면 `{"found": false}` 반환
+
 **메서드 레지스트리:**
 
 **`get_all_handlers() -> dict[str, Any]`**
 - 메서드 이름을 핸들러 함수에 매핑하는 dict 반환
 - 시작 중 `JsonRpcServer.run()`에서 호출
-- 도메인별로 구성된 총 25개 메서드:
+- 도메인별로 구성된 총 29개 메서드:
   - 건강: `health.check`
   - 설정: `config.set_keys`, `config.get_keys`, `config.test_provider`
   - 프로젝트: `project.list`, `project.create`, `project.get`, `project.update`, `project.delete`
@@ -428,6 +456,9 @@ send_notification → JsonRpcNotification → _write → stdout (병렬)
   - 용어집: `glossary.list`, `glossary.create`, `glossary.update`, `glossary.delete`
   - 페르소나: `persona.list`, `persona.create`, `persona.update`, `persona.delete`
   - 파이프라인: `pipeline.translate_chapter`, `pipeline.cancel`
+  - 세그먼트: `segment.update_translation`
+  - 배치: `batch.get_reasoning`
+  - 내보내기: `export.chapter_txt`, `export.chapter_docx`
 
 ### 2. 데이터베이스 계층 (`db/`)
 
@@ -1793,6 +1824,120 @@ python build.py  # PyInstaller 사용
 - 백업: `cp ~/.fiction-translator/data.db ~/.fiction-translator/data.db.backup`
 - 재설정: `rm ~/.fiction-translator/data.db` (다음 시작 시 재생성됨)
 - 마이그레이션: (향후) Alembic 마이그레이션 사용
+
+---
+
+## 애플리케이션 아키텍처 흐름도
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Tauri 데스크톱 앱                      │
+│  ┌───────────────────────┐  ┌────────────────────────┐  │
+│  │    React 프론트엔드    │  │     Rust 셸            │  │
+│  │  (Vite + TypeScript)  │  │   (Tauri v2 코어)      │  │
+│  │                       │  │                        │  │
+│  │  ┌─────────────────┐  │  │  ┌──────────────────┐  │  │
+│  │  │  페이지:         │  │  │  │  커맨드:          │  │  │
+│  │  │  - ProjectList   │  │  │  │  - rpc_call       │  │  │
+│  │  │  - EditorPage    │  │  │  │  - sidecar_status │  │  │
+│  │  │  - SettingsPage  │  │  │  └──────────────────┘  │  │
+│  │  └─────────────────┘  │  │  ┌──────────────────┐  │  │
+│  │  ┌─────────────────┐  │  │  │  사이드카 매니저   │  │  │
+│  │  │  컴포넌트:       │  │  │  │  - 시작/중지      │  │  │
+│  │  │  - SegmentEditor │  │  │  │  - 건강 체크      │  │  │
+│  │  │  - CoTPanel      │  │  │  │  - JSON-RPC 호출  │  │  │
+│  │  │  - ExportButton  │  │  │  └──────────────────┘  │  │
+│  │  └─────────────────┘  │  │           │              │  │
+│  │  ┌─────────────────┐  │  │           │ stdin/stdout │  │
+│  │  │  API 브릿지       │──│──│───────────┘              │  │
+│  │  │  (tauri-bridge)  │  │  │                        │  │
+│  │  └─────────────────┘  │  │                        │  │
+│  └───────────────────────┘  └────────────────────────┘  │
+└─────────────────────────────┬───────────────────────────┘
+                              │ JSON-RPC 2.0 (stdin/stdout)
+┌─────────────────────────────┴───────────────────────────┐
+│                   Python 사이드카                         │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  IPC 계층 (JsonRpcServer)                          │  │
+│  │  29개 메서드: health, config, project, chapter,     │  │
+│  │  glossary, persona, pipeline, segment, batch,      │  │
+│  │  export                                            │  │
+│  └──────────────────────┬─────────────────────────────┘  │
+│                         │                                 │
+│  ┌──────────────────────┴─────────────────────────────┐  │
+│  │  서비스 계층                                         │  │
+│  │  project / chapter / glossary / persona / export    │  │
+│  └──────────────────────┬─────────────────────────────┘  │
+│                         │                                 │
+│  ┌──────────────────────┴─────────────────────────────┐  │
+│  │  파이프라인 계층 (LangGraph)                         │  │
+│  │                                                     │  │
+│  │  load_context ──► segment ──► extract_characters    │  │
+│  │       │                            │                │  │
+│  │       │                      ┌─────▼──────┐         │  │
+│  │       │                      │  validate   │         │  │
+│  │       │                      └──┬─────┬───┘         │  │
+│  │       │             재시도 ◄────┘     │ 통과        │  │
+│  │       │              (최대 3)         ▼             │  │
+│  │       │                         ┌──────────┐        │  │
+│  │       │                         │ translate │        │  │
+│  │       │                         └────┬─────┘        │  │
+│  │       │                              ▼              │  │
+│  │       │                         ┌──────────┐        │  │
+│  │       │             재시도 ◄────┤  review  │        │  │
+│  │       │              (최대 2)    └────┬─────┘        │  │
+│  │       │                              │ 통과         │  │
+│  │       │                              ▼              │  │
+│  │       │                      learn_personas         │  │
+│  │       │                              │              │  │
+│  │       │                              ▼              │  │
+│  │       │                         finalize ──► END    │  │
+│  │       │                                             │  │
+│  └───────┴─────────────────────────────────────────────┘  │
+│                         │                                 │
+│  ┌──────────────────────┴─────────────────────────────┐  │
+│  │  LLM 계층                                           │  │
+│  │  Gemini / Claude / OpenAI                           │  │
+│  └────────────────────────────────────────────────────┘  │
+│                         │                                 │
+│  ┌──────────────────────┴─────────────────────────────┐  │
+│  │  데이터베이스 계층 (SQLAlchemy + SQLite)              │  │
+│  │  10개 테이블: Project, Chapter, Segment, Translation,│  │
+│  │  TranslationBatch, GlossaryEntry, Persona,          │  │
+│  │  PersonaSuggestion, PipelineRun, Export              │  │
+│  └────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
+
+## 변경 로그
+
+### 세션 2025-02-10
+
+**연결된 기능 (프론트엔드 ↔ 백엔드):**
+
+1. **설정 페이지 API 키** — `SettingsPage.tsx`를 `config.set_keys`, `config.get_keys`, `config.test_provider`를 통해 API 키 저장/불러오기/테스트에 연결. 구성된 제공자에 대한 로딩 상태 및 녹색 표시 점 추가.
+
+2. **세그먼트 편집** — `segment.update_translation` RPC 메서드 + `tauri-bridge.ts`에 `updateSegmentTranslation()` 추가. 편집기 페이지 `handleSegmentEdit`이 이제 `manually_edited=True` 보호와 함께 편집 내용을 DB에 저장.
+
+3. **내보내기 기능** — `export.chapter_txt` 및 `export.chapter_docx` RPC 메서드 + `tauri-bridge.ts`에 `exportChapterTxt()` / `exportChapterDocx()` 추가. 편집기 페이지 내보내기 버튼이 로딩 상태와 함께 TXT 다운로드 트리거.
+
+4. **CoT 추론 패널** — `batch.get_reasoning` RPC 메서드 + `tauri-bridge.ts`에 `getBatchReasoning()` 추가. `CoTReasoningPanel.tsx`가 이제 `useQuery`를 통해 실제 배치 추론 데이터 (situation_summary, character_events, review_feedback) 가져오기.
+
+**버그 수정:**
+
+5. **Rust 빌드 경고** — `events.rs`의 사용되지 않는 구조체와 `ipc.rs`의 사용되지 않는 필드에 `#[allow(dead_code)]` 주석 추가.
+
+6. **사이드카 시작 수정** — `python -m fiction_translator` 모듈 실행을 가능하게 하는 `__main__.py` 생성. 이 파일 없이는 사이드카 프로세스가 시작할 수 없어 120초 건강 체크 타임아웃 발생.
+
+**수정된 파일:**
+- `src/pages/SettingsPage.tsx` — API 키 저장/불러오기/테스트 연결
+- `src/pages/EditorPage.tsx` — 세그먼트 편집 + 내보내기 연결
+- `src/components/editor/CoTReasoningPanel.tsx` — 실제 배치 추론 데이터
+- `src/api/tauri-bridge.ts` — 4개 새 API 메서드
+- `sidecar/src/fiction_translator/ipc/handlers.py` — 4개 새 RPC 핸들러
+- `sidecar/src/fiction_translator/__main__.py` — 신규: 모듈 진입점
+- `src-tauri/src/events.rs` — 데드 코드 주석
+- `src-tauri/src/ipc.rs` — 데드 코드 주석
 
 ---
 
