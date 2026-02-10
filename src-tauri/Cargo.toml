@@ -1,0 +1,20 @@
+[package]
+name = "fiction-translator-v2"
+version = "2.0.0"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+log = "0.4"
+env_logger = "0.11"
+
+[lib]
+name = "fiction_translator_v2_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]

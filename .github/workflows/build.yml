@@ -1,0 +1,145 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            rust_target: aarch64-apple-darwin
+            sidecar_name: fiction-translator-sidecar-aarch64-apple-darwin
+          - platform: macos-latest
+            rust_target: x86_64-apple-darwin
+            sidecar_name: fiction-translator-sidecar-x86_64-apple-darwin
+          - platform: windows-latest
+            rust_target: x86_64-pc-windows-msvc
+            sidecar_name: fiction-translator-sidecar-x86_64-pc-windows-msvc.exe
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Python Sidecar
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install sidecar dependencies
+        run: |
+          cd sidecar
+          pip install -e ".[bundle]"
+          pip install pyinstaller
+
+      - name: Build sidecar binary
+        run: |
+          cd sidecar
+          pyinstaller --onefile --name fiction-translator-sidecar \
+            --hidden-import fiction_translator \
+            --hidden-import fiction_translator.ipc \
+            --hidden-import fiction_translator.db \
+            --hidden-import fiction_translator.services \
+            --hidden-import fiction_translator.pipeline \
+            --hidden-import fiction_translator.llm \
+            --collect-submodules fiction_translator \
+            src/fiction_translator/main.py
+
+      - name: Place sidecar binary for Tauri
+        shell: bash
+        run: |
+          mkdir -p src-tauri/binaries
+          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+            cp sidecar/dist/fiction-translator-sidecar.exe "src-tauri/binaries/${{ matrix.sidecar_name }}"
+          else
+            cp sidecar/dist/fiction-translator-sidecar "src-tauri/binaries/${{ matrix.sidecar_name }}"
+            chmod +x "src-tauri/binaries/${{ matrix.sidecar_name }}"
+          fi
+
+      # Node.js Frontend
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      # Rust / Tauri
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Platform-specific deps
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: npx tauri
+          args: --target ${{ matrix.rust_target }}
+
+      # Upload artifacts
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fiction-translator-${{ matrix.rust_target }}
+          path: |
+            src-tauri/target/${{ matrix.rust_target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.rust_target }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.rust_target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.rust_target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.rust_target }}/release/bundle/**/*.deb
+          if-no-files-found: warn
+
+  # Release job (only on tags)
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            fiction-translator-*/**/*.dmg
+            fiction-translator-*/**/*.msi
+            fiction-translator-*/**/*.exe
+            fiction-translator-*/**/*.AppImage
+            fiction-translator-*/**/*.deb
+          draft: true
+          generate_release_notes: true

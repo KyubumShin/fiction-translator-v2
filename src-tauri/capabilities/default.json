@@ -1,0 +1,11 @@
+{
+  "$schema": "https://tauri.app/schema/capability.json",
+  "identifier": "default",
+  "description": "Default permissions for Fiction Translator",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-execute",
+    "shell:allow-open"
+  ]
+}
