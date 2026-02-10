@@ -5,6 +5,7 @@ import type { SegmentMapEntry } from "@/api/types";
 
 interface ConnectedTextViewProps {
   text: string;
+  sourceText?: string;
   segmentMap: SegmentMapEntry[];
   side: "source" | "translated";
   activeSegmentId: number | null;
@@ -16,6 +17,7 @@ interface ConnectedTextViewProps {
 
 export function ConnectedTextView({
   text,
+  sourceText,
   segmentMap,
   side,
   activeSegmentId,
@@ -113,9 +115,16 @@ export function ConnectedTextView({
 
   const editingSegment = segments.find(s => s.id === editingSegmentId);
 
+  const editingEntry = editingSegmentId !== null
+    ? segmentMap.find(e => e.segment_id === editingSegmentId)
+    : null;
+  const editingSegmentSourceText = editingEntry && sourceText
+    ? sourceText.slice(editingEntry.source_start, editingEntry.source_end)
+    : undefined;
+
   return (
     <div ref={containerRef} className="relative prose prose-slate dark:prose-invert max-w-none">
-      <div className="leading-relaxed text-[15px]" style={{ lineHeight: "1.8" }}>
+      <div className="leading-relaxed text-[15px] whitespace-pre-wrap" style={{ lineHeight: "1.8" }}>
         {segments.map((segment) => (
           <span
             key={segment.id}
@@ -138,6 +147,7 @@ export function ConnectedTextView({
         <InlineEditor
           segmentId={editingSegmentId}
           initialText={editingSegment.text}
+          sourceText={editingSegmentSourceText}
           position={editorPosition}
           onSave={handleSaveEdit}
           onCancel={handleCancelEdit}

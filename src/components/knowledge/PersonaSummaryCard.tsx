@@ -5,9 +5,10 @@ import { cn } from "@/lib/cn";
 interface PersonaSummaryCardProps {
   persona: Persona;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
-export function PersonaSummaryCard({ persona, onEdit }: PersonaSummaryCardProps) {
+export function PersonaSummaryCard({ persona, onEdit, onDelete }: PersonaSummaryCardProps) {
   const getFormalityLabel = (level: number) => {
     if (level <= 2) return "Very Casual";
     if (level <= 4) return "Casual";
@@ -25,7 +26,7 @@ export function PersonaSummaryCard({ persona, onEdit }: PersonaSummaryCardProps)
   };
 
   return (
-    <div className="p-5 border border-border rounded-xl bg-card hover:border-primary/50 hover:shadow-md transition-all">
+    <div className="group p-5 border border-border rounded-xl bg-card hover:border-primary/50 hover:shadow-md transition-all">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <h3 className="text-lg font-semibold mb-1">{persona.name}</h3>
@@ -42,11 +43,22 @@ export function PersonaSummaryCard({ persona, onEdit }: PersonaSummaryCardProps)
             </div>
           )}
         </div>
-        {persona.auto_detected && (
-          <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium">
-            Auto
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {persona.auto_detected && (
+            <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium">
+              Auto
+            </span>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            title="Delete persona"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {persona.personality && (

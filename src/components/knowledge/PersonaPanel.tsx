@@ -108,6 +108,7 @@ export function PersonaPanel({ projectId }: PersonaPanelProps) {
                 key={persona.id}
                 persona={persona}
                 onEdit={() => handleEdit(persona)}
+                onDelete={() => handleDelete(persona.id)}
               />
             ))}
           </div>

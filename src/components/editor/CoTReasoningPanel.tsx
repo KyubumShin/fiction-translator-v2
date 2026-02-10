@@ -15,6 +15,7 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
     ? segmentMap.find((entry) => entry.segment_id === activeSegmentId)
     : null;
   const batchId = activeSegment?.batch_id;
+  console.log('[CoT Debug] activeSegmentId:', activeSegmentId, 'activeSegment:', activeSegment, 'batchId:', batchId);
 
   // Fetch reasoning data when batch_id is available
   const { data: reasoningData } = useQuery({
@@ -22,6 +23,7 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
     queryFn: () => api.getBatchReasoning(batchId!),
     enabled: !!batchId,
   });
+  console.log('[CoT Debug] reasoningData:', reasoningData);
 
   if (!activeSegmentId) {
     return null;
@@ -53,8 +55,14 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
 
       {showReasoning && (
         <div className="px-6 py-4 space-y-4 text-sm border-t border-border/50">
-          {!reasoningData?.found ? (
-            <p className="text-muted-foreground italic">No reasoning data available for this segment.</p>
+          {!batchId ? (
+            <p className="text-muted-foreground italic">
+              Reasoning data is not available for this segment. It may not have been translated yet, or the translation did not include Chain-of-Thought reasoning.
+            </p>
+          ) : !reasoningData?.found ? (
+            <p className="text-muted-foreground italic">
+              No reasoning data found for batch #{batchId}. The translation pipeline may not have stored reasoning data for this batch.
+            </p>
           ) : (
             <>
               {reasoningData.situation_summary && (

@@ -50,7 +50,7 @@ export function RetranslateDialog({
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             Source Text
           </label>
-          <div className="mt-1 p-3 bg-muted/50 rounded-lg text-sm leading-relaxed max-h-32 overflow-auto">
+          <div className="mt-1 p-3 bg-muted/50 rounded-lg text-sm leading-relaxed max-h-32 overflow-auto whitespace-pre-wrap">
             {sourceText}
           </div>
         </div>
@@ -59,7 +59,7 @@ export function RetranslateDialog({
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             Current Translation
           </label>
-          <div className="mt-1 p-3 bg-muted/50 rounded-lg text-sm leading-relaxed max-h-32 overflow-auto">
+          <div className="mt-1 p-3 bg-muted/50 rounded-lg text-sm leading-relaxed max-h-32 overflow-auto whitespace-pre-wrap">
             {currentTranslation}
           </div>
         </div>

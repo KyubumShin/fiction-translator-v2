@@ -85,6 +85,7 @@ export function SideBySideEditor({
               </h2>
               <ConnectedTextView
                 text={translatedText}
+                sourceText={sourceText}
                 segmentMap={segmentMap}
                 side="translated"
                 activeSegmentId={activeSegmentId}

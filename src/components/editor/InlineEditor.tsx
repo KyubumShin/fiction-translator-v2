@@ -4,6 +4,7 @@ import { cn } from "@/lib/cn";
 interface InlineEditorProps {
   segmentId: number;
   initialText: string;
+  sourceText?: string;
   position: { top: number; left: number; width: number };
   onSave: (text: string) => void;
   onCancel: () => void;
@@ -12,6 +13,7 @@ interface InlineEditorProps {
 export function InlineEditor({
   segmentId: _segmentId,
   initialText,
+  sourceText,
   position,
   onSave,
   onCancel,
@@ -55,6 +57,18 @@ export function InlineEditor({
           maxWidth: 600,
         }}
       >
+        {sourceText && (
+          <div className="px-4 pt-3 pb-2 border-b border-border/50 space-y-2 max-h-40 overflow-auto">
+            <div>
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Source</div>
+              <div className="text-sm text-foreground/70 whitespace-pre-wrap leading-relaxed">{sourceText}</div>
+            </div>
+            <div>
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Original Translation</div>
+              <div className="text-sm text-foreground/70 whitespace-pre-wrap leading-relaxed">{initialText}</div>
+            </div>
+          </div>
+        )}
         <textarea
           ref={textareaRef}
           value={text}
