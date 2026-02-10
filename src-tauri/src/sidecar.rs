@@ -7,6 +7,8 @@ use tokio::sync::{oneshot, Mutex, RwLock};
 use log::{info, error, warn};
 use serde_json::Value;
 
+use tauri::{Emitter, Manager};
+
 use crate::ipc::{JsonRpcRequest, JsonRpcResponse, JsonRpcNotification};
 
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value, String>>>>>;

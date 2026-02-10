@@ -5,7 +5,7 @@ mod sidecar;
 mod state;
 
 use state::AppState;
-use tauri::State;
+use tauri::{Manager, State};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
