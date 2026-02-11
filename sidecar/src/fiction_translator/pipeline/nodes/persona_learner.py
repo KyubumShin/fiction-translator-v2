@@ -63,6 +63,7 @@ async def persona_learner_node(state: TranslationState) -> dict:
             detected_characters=detected_characters,
             existing_personas=existing_personas,
             target_language=state.get("target_language", "en"),
+            source_language=state.get("source_language", "ko"),
         )
 
         result = await provider.generate_json(

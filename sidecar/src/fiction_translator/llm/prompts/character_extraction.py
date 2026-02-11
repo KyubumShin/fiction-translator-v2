@@ -53,6 +53,8 @@ For each character provide:
 - personality_hints: brief personality notes from context clues
 - speech_style_hints: any notable speech patterns or register
 
+Write personality_hints and speech_style_hints in {lang_label}.
+
 Return ONLY valid JSON:
 {{
   "characters": [

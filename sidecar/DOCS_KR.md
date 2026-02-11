@@ -1283,6 +1283,7 @@ learn_personas → finalize → END
 2. **LLM 기반 추출** (선택적, API 키 사용 가능한 경우):
    - 모든 세그먼트 텍스트 연결 (8000자로 제한)
    - 캐릭터 추출 프롬프트로 LLM에 전송
+   - `personality_hints`와 `speech_style_hints`는 원본 언어로 생성됨
    - JSON 파싱: `{"characters": [{"name": str, "role": str, "personality_hints": str, ...}]}`
    - 정규식 결과와 병합 (LLM이 우선)
 
@@ -1433,11 +1434,11 @@ Chain-of-Thought 추론을 사용하여 배치로 세그먼트 번역.
 
 **`async persona_learner_node(state: TranslationState) -> dict`**
 
-페르소나 업데이트를 위해 번역에서 캐릭터 통찰력 추출.
+페르소나 업데이트를 위해 번역에서 캐릭터 통찰력 추출. 페르소나 값(personality, speech_style 등)은 원본 언어로 생성됨.
 
 **학습 프로세스:**
 1. 번역된 세그먼트를 연결된 텍스트로 조인
-2. 페르소나 분석 프롬프트로 LLM에 전송
+2. 페르소나 분석 프롬프트로 LLM에 전송 (`source_language`를 사용하여 원본 언어로 값 출력)
 3. JSON 응답 파싱:
    ```python
    {
@@ -1603,11 +1604,11 @@ PROVIDERS = {
 각 프롬프트 빌더는 특정 파이프라인 단계를 위한 시스템 및 사용자 프롬프트를 구성합니다. 이들은 파이프라인 노드에서 참조되지만 실제 구현 세부 정보는 별도 파일에 있을 것입니다:
 
 - `segmentation.py` — `build_segmentation_prompt()`
-- `character_extraction.py` — `build_character_extraction_prompt()`
+- `character_extraction.py` — `build_character_extraction_prompt()` — `personality_hints`/`speech_style_hints`를 원본 언어로 출력
 - `validation.py` — (필요 없음; 검증은 결정론적)
 - `cot_translation.py` — `build_cot_translation_prompt()`
 - `review.py` — `build_review_prompt()`
-- `persona_analysis.py` — `build_persona_analysis_prompt()`
+- `persona_analysis.py` — `build_persona_analysis_prompt(source_language)` — 페르소나 값을 원본 언어로 출력
 
 ## 데이터 흐름
 

@@ -1283,6 +1283,7 @@ Extracts characters using regex + optional LLM analysis.
 2. **LLM-based extraction** (optional, if API keys available):
    - Concatenate all segment texts (cap at 8000 chars)
    - Send to LLM with character extraction prompt
+   - `personality_hints` and `speech_style_hints` are generated in the source language
    - Parse JSON: `{"characters": [{"name": str, "role": str, "personality_hints": str, ...}]}`
    - Merge with regex results (LLM takes precedence)
 
@@ -1299,8 +1300,8 @@ Extracts characters using regex + optional LLM analysis.
             "aliases": ["Ally"],
             "role": "main",
             "speaking_lines": 15,
-            "personality_hints": "Curious, brave",
-            "speech_style_hints": "Direct, informal",
+            "personality_hints": "Curious, brave",  # in source language
+            "speech_style_hints": "Direct, informal",  # in source language
             "source": "llm",
             "persona_id": 42,
             "canonical_name": "Alice"
@@ -1433,11 +1434,11 @@ If `review_passed=False` and `review_iteration < 2`, pipeline loops back to `tra
 
 **`async persona_learner_node(state: TranslationState) -> dict`**
 
-Extracts character insights from translations for persona updates.
+Extracts character insights from translations for persona updates. Persona values (personality, speech_style, etc.) are generated in the source language.
 
 **Learning process:**
 1. Join translated segments into connected text
-2. Send to LLM with persona analysis prompt
+2. Send to LLM with persona analysis prompt (with `source_language` to output values in source language)
 3. Parse JSON response:
    ```python
    {
@@ -1603,11 +1604,11 @@ PROVIDERS = {
 Each prompt builder constructs the system and user prompts for a specific pipeline stage. These are referenced by the pipeline nodes but the actual implementation details would be in separate files:
 
 - `segmentation.py` — `build_segmentation_prompt()`
-- `character_extraction.py` — `build_character_extraction_prompt()`
+- `character_extraction.py` — `build_character_extraction_prompt()` — outputs `personality_hints`/`speech_style_hints` in source language
 - `validation.py` — (Not needed; validation is deterministic)
 - `cot_translation.py` — `build_cot_translation_prompt()`
 - `review.py` — `build_review_prompt()`
-- `persona_analysis.py` — `build_persona_analysis_prompt()`
+- `persona_analysis.py` — `build_persona_analysis_prompt(source_language)` — outputs persona values in source language
 
 ## Data Flow
 

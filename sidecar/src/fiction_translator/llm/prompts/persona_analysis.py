@@ -11,6 +11,7 @@ def build_persona_analysis_prompt(
     detected_characters: list[dict],
     existing_personas: list[dict] | None = None,
     target_language: str = "en",
+    source_language: str = "ko",
 ) -> str:
     """Build a persona-analysis prompt.
 
@@ -24,12 +25,19 @@ def build_persona_analysis_prompt(
         Known personas from the project.
     target_language : str
         The translation target language.
+    source_language : str
+        The source language.
 
     Returns
     -------
     str
         Prompt expecting JSON response.
     """
+    lang_names = {
+        "ko": "Korean", "ja": "Japanese", "zh": "Chinese", "en": "English",
+    }
+    lang_label = lang_names.get(source_language, source_language)
+
     char_names = [c.get("name", "?") for c in detected_characters]
     char_list = ", ".join(char_names) if char_names else "(none detected)"
 
@@ -61,6 +69,8 @@ For each character that speaks in the text, provide:
 
 Focus on NEW information not already captured in existing persona records.
 
+Write all personality observations, speech style notes, and values in {lang_label} (the source language).
+
 Return ONLY valid JSON:
 {{
   "persona_updates": [
@@ -85,6 +95,7 @@ Return ONLY the JSON object."""
 def build_persona_learning_prompt(
     translated_text: str,
     existing_personas: list[dict],
+    source_language: str = "ko",
 ) -> str:
     """
     Build prompt for learning new character traits from translations.
@@ -95,10 +106,16 @@ def build_persona_learning_prompt(
     Args:
         translated_text: Translated text to analyze
         existing_personas: List of existing persona dicts with 'name', 'traits' fields
+        source_language: Source language code (default: "ko")
 
     Returns:
         Prompt string requesting persona learning
     """
+    lang_names = {
+        "ko": "Korean", "ja": "Japanese", "zh": "Chinese", "en": "English",
+    }
+    lang_label = lang_names.get(source_language, source_language)
+
     parts = [
         "Analyze this translated fiction text to learn about character voices and personalities.",
         "",
@@ -191,6 +208,7 @@ def build_persona_learning_prompt(
         "- Focus on actionable traits that improve future translations",
         "- Distinguish between character personality and narrator voice",
         "- Note any changes in character voice compared to existing personas",
+        f"- Write all personality, speech pattern, and trait descriptions in {lang_label} (the source language)",
         "",
         "**Formality Levels**:",
         "1. Very casual (slang, contractions, informal)",
