@@ -40,11 +40,15 @@ Fiction Translator v2.0은 실시간 파이프라인 진행 상황, 연결된 �
 - **원클릭 번역**: 실시간 파이프라인 진행 상황 추적과 함께 번역 시작
 - **연결된 산문 뷰**: 연속 텍스트 표시 (세그먼트별이 아닌)로 자연스러운 읽기 제공
 - **Chain-of-Thought 번역**: 보이는 추론 과정이 포함된 배치 번역
+- **CoT 토글**: 속도 대 품질 제어를 위해 번역별로 Chain-of-Thought 추론을 활성화 또는 비활성화
 - **다단계 파이프라인**: 검증 및 검토 루프가 있는 8노드 LangGraph 워크플로우
 - **다중 LLM 지원**: Google Gemini, Anthropic Claude, OpenAI GPT
 - **용어집 관리**: 번역 전체에서 일관된 용어 사용
 - **캐릭터 페르소나**: 자동 감지 캐릭터 추적 및 페르소나 인사이트
 - **나란한 편집기**: 원본과 번역 간 세그먼트 매핑을 클릭하여 강조 표시
+- **원문 미리보기**: 번역 실행 전 2단 레이아웃으로 원문 텍스트 보기
+- **문단 구분 보존**: 파이프라인을 통해 원본 문단 및 줄바꿈 구조 유지
+- **스마트 따옴표 정규화**: LLM 처리 전 스마트 따옴표를 일반 따옴표로 자동 변환
 - **인라인 편집**: 실시간 업데이트와 함께 직접 번역 편집
 - **내보내기 지원**: TXT 및 DOCX 내보내기 형식
 - **명령어 팔레트**: 키보드 기반 탐색 (Cmd+K)
@@ -188,11 +192,15 @@ fiction-translator-v2/
 │       │   ├── providers.py           # LLMProvider ABC + Gemini/Claude/OpenAI
 │       │   └── prompts/
 │       │       ├── cot_translation.py      # CoT 번역 프롬프트 빌더
+│       │       ├── text_utils.py           # 스마트 따옴표 정규화 유틸리티
 │       │       ├── segmentation.py         # 세그먼테이션 프롬프트
 │       │       ├── character_extraction.py # 캐릭터 추출 프롬프트
 │       │       ├── validation.py           # 검증 프롬프트
 │       │       ├── review.py               # 검토 프롬프트
 │       │       └── persona_analysis.py     # 페르소나 분석 프롬프트
+│   ├── tests/                             # 유닛 테스트
+│   │   ├── test_text_utils.py             # 따옴표 정규화 테스트
+│   │   └── test_paragraph_breaks.py       # 문단 구분 테스트
 │       ├── DOCS_EN.md                 # 영문 설명서
 │       └── DOCS_KR.md                 # 한문 설명서
 │
@@ -298,6 +306,7 @@ Finalize (데이터베이스에 결과 저장)
 - 세그먼테이션 및 번역 단계에서의 품질 게이트
 - Chain-of-Thought 추론 보존
 - 캐릭터 페르소나 학습
+- LLM 처리 전 스마트 따옴표 정규화
 
 ## 지원되는 언어
 

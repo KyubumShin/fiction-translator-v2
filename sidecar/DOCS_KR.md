@@ -128,7 +128,8 @@ sidecar/
             ├── validation.py
             ├── cot_translation.py
             ├── review.py
-            └── persona_analysis.py
+            ├── persona_analysis.py
+            └── text_utils.py          # 스마트 따옴표 정규화 유틸리티
 ```
 
 ## 모듈 문서
@@ -393,6 +394,7 @@ send_notification → JsonRpcNotification → _write → stdout (병렬)
 - 번역 파이프라인 시작
 - `graph.py`에서 `run_translation_pipeline()` 실행
 - `send_progress` 콜백을 통해 진행 상황 알림 전송
+- `use_cot` 매개변수(기본값 True)를 통해 Chain-of-Thought 추론을 토글할 수 있습니다
 - 반환:
   ```python
   {
@@ -984,6 +986,7 @@ LangGraph 상태 관리를 위한 TypedDict 정의. 모두 `total=False` 사용�
 - `speaker: str | None` — 대화를 위한 화자 이름
 - `source_start_offset: int` — 원본의 문자 오프셋
 - `source_end_offset: int` — 종료 오프셋
+- `has_preceding_break: bool` — 이 세그먼트 앞에 문단 구분이 있는지 여부
 
 **`TranslatedSegment(TypedDict, total=False)`**
 - `segment_id: int` — 순서/ID
@@ -1017,6 +1020,7 @@ LangGraph 상태 관리를 위한 TypedDict 정의. 모두 `total=False` 사용�
 - `target_language: str`
 - `llm_provider: str`
 - `api_keys: dict[str, str]`
+- `use_cot: bool` — Chain-of-Thought 추론 사용 여부 (기본값: True)
 
 **컨텍스트 (DB에서 로드):**
 - `glossary: dict[str, str]` — 용어 매핑
@@ -1336,6 +1340,8 @@ learn_personas → finalize → END
 **`async translator_node(state: TranslationState) -> dict`**
 
 Chain-of-Thought 추론을 사용하여 배치로 세그먼트 번역.
+
+`use_cot=False`일 때, situation_summary, character_events, unknown_terms 없이 번역만 반환하는 간소화된 프롬프트(`build_simple_translation_prompt`)를 사용합니다.
 
 **배치 그룹화:**
 - 배치당 최대 20,000자
@@ -1910,6 +1916,44 @@ python build.py  # PyInstaller 사용
 ```
 
 ## 변경 로그
+
+### 세션 2025-02-11
+
+**새로운 기능:**
+
+1. **문단 구분 보존** — `SegmentData`에 `has_preceding_break` 플래그 추가. 세그멘터가 이제 이중 줄바꿈 경계를 추적합니다. `finalize_node`과 `get_editor_data` 모두 이 플래그를 사용하여 문단 사이에 `\n\n`, 줄 사이에 `\n`을 올바른 오프셋 산술로 삽입합니다. 프론트엔드 `ConnectedTextView`는 문단 구분을 더 큰 간격으로 렌더링합니다.
+
+2. **스마트 따옴표 정규화** — LLM에 텍스트를 보내기 전에 스마트 따옴표(U+201C, U+201D, U+2018, U+2019)를 ASCII 등가물로 변환하는 `normalize_quotes()`가 포함된 `text_utils.py` 추가. 메인 번역 파이프라인과 재번역 경로 모두에 적용.
+
+3. **원문 미리보기** — 편집기가 이제 번역 실행 전 적절한 문단 및 줄바꿈 렌더링과 함께 2단 레이아웃으로 원문 텍스트를 표시합니다.
+
+4. **CoT 토글** — `TranslationState`와 `pipeline_translate_chapter` 핸들러에 `use_cot` 매개변수 추가. 비활성화 시 Chain-of-Thought 추론 없이 더 빠르고 저렴한 번역을 위해 `build_simple_translation_prompt()`를 사용합니다. 프론트엔드는 편집기 툴바에 토글 스위치를 제공합니다. `CoTReasoningPanel`은 CoT가 비활성화되면 안내 메시지를 표시합니다.
+
+**새 파일:**
+- `sidecar/src/fiction_translator/llm/prompts/text_utils.py` — 스마트 따옴표 정규화
+- `sidecar/tests/test_text_utils.py` — 따옴표 정규화를 위한 11개 유닛 테스트
+- `sidecar/tests/test_paragraph_breaks.py` — 문단 구분 처리를 위한 8개 유닛 테스트
+
+**수정된 파일 (백엔드):**
+- `pipeline/state.py` — SegmentData에 `has_preceding_break`, TranslationState에 `use_cot` 추가
+- `pipeline/nodes/segmenter.py` — `_split_paragraphs()`가 이제 구분 플래그 반환
+- `pipeline/nodes/translator.py` — 조건부 CoT/심플 프롬프트, 스마트 따옴표 정규화
+- `pipeline/graph.py` — `finalize_node`이 문단 구분을 위한 가변 구분자 사용
+- `services/chapter_service.py` — 구분 감지가 포함된 4단계 `get_editor_data()`
+- `services/segment_service.py` — 재번역 시 스마트 따옴표 정규화
+- `ipc/handlers.py` — `use_cot` 매개변수 지원
+- `llm/prompts/cot_translation.py` — `build_simple_translation_prompt()` 추가
+
+**수정된 파일 (프론트엔드):**
+- `src/pages/EditorPage.tsx` — 원문 미리보기, CoT 토글 스위치
+- `src/components/editor/ConnectedTextView.tsx` — 문단 구분 렌더링
+- `src/components/editor/CoTReasoningPanel.tsx` — CoT 비활성화 상태
+- `src/stores/editor-store.ts` — `useCoT` 상태
+- `src/api/tauri-bridge.ts` — `useCot` 매개변수
+- `src/hooks/useTranslation.ts` — `useCot` 전달
+- `src/components/translation/TranslateButton.tsx` — `useCot` 프롭
+
+---
 
 ### 세션 2025-02-10
 

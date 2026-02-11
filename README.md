@@ -40,11 +40,15 @@ Business logic layer containing:
 - **One-Click Translation**: Start translation with real-time pipeline progress tracking
 - **Connected Prose View**: Continuous text display (not segment-by-segment) for natural reading
 - **Chain-of-Thought Translation**: Batch translation with visible reasoning process
+- **CoT Toggle**: Enable or disable Chain-of-Thought reasoning per translation for speed vs. quality control
 - **Multi-Stage Pipeline**: 8-node LangGraph workflow with validation and review loops
 - **Multi-LLM Support**: Google Gemini, Anthropic Claude, OpenAI GPT
 - **Glossary Management**: Consistent terminology across translations
 - **Character Personas**: Auto-detected character tracking with persona insights
 - **Side-by-Side Editor**: Click-to-highlight segment mapping between source and translation
+- **Source Text Preview**: View source text in a two-column layout before running translation
+- **Paragraph Break Preservation**: Maintains original paragraph and line break structure through the pipeline
+- **Smart Quote Normalization**: Automatically converts smart quotes to straight quotes before LLM processing
 - **Inline Editing**: Direct translation editing with real-time updates
 - **Export Support**: TXT and DOCX export formats
 - **Command Palette**: Keyboard-driven navigation (Cmd+K)
@@ -188,11 +192,15 @@ fiction-translator-v2/
 │       │   ├── providers.py           # LLMProvider ABC + Gemini/Claude/OpenAI
 │       │   └── prompts/
 │       │       ├── cot_translation.py      # CoT translation prompt builder
+│       │       ├── text_utils.py           # Smart quote normalization utility
 │       │       ├── segmentation.py         # Segmentation prompt
 │       │       ├── character_extraction.py # Character extraction prompt
 │       │       ├── validation.py           # Validation prompt
 │       │       ├── review.py               # Review prompt
 │       │       └── persona_analysis.py     # Persona analysis prompt
+│   ├── tests/                             # Unit tests
+│   │   ├── test_text_utils.py             # Quote normalization tests
+│   │   └── test_paragraph_breaks.py       # Paragraph break tests
 │       ├── DOCS_EN.md                 # English documentation
 │       └── DOCS_KR.md                 # Korean documentation
 │
@@ -298,6 +306,7 @@ Finalize (save results to database)
 - Quality gates at segmentation and translation stages
 - Chain-of-Thought reasoning preservation
 - Character persona learning
+- Smart quote normalization before LLM processing
 
 ## Supported Languages
 

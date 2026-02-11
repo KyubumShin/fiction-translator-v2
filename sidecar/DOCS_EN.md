@@ -128,7 +128,8 @@ sidecar/
             ├── validation.py
             ├── cot_translation.py
             ├── review.py
-            └── persona_analysis.py
+            ├── persona_analysis.py
+            └── text_utils.py          # Smart quote normalization utility
 ```
 
 ## Module Documentation
@@ -393,6 +394,7 @@ Registers 29 RPC methods organized by domain. Each handler:
 - Start the translation pipeline
 - Runs `run_translation_pipeline()` from `graph.py`
 - Sends progress notifications via `send_progress` callback
+- Accepts optional `use_cot` parameter (default True) to toggle Chain-of-Thought reasoning
 - Returns:
   ```python
   {
@@ -984,6 +986,7 @@ Defines TypedDicts for LangGraph state management. All use `total=False` so node
 - `speaker: str | None` — Speaker name for dialogue
 - `source_start_offset: int` — Character offset in source
 - `source_end_offset: int` — End offset
+- `has_preceding_break: bool` — Whether this segment is preceded by a paragraph break
 
 **`TranslatedSegment(TypedDict, total=False)`**
 - `segment_id: int` — Order/ID
@@ -1017,6 +1020,7 @@ Full pipeline state (50+ fields organized by category):
 - `target_language: str`
 - `llm_provider: str`
 - `api_keys: dict[str, str]`
+- `use_cot: bool` — Whether to use Chain-of-Thought reasoning (default: True)
 
 **Context (loaded from DB):**
 - `glossary: dict[str, str]` — Term mappings
@@ -1336,6 +1340,8 @@ If validation fails, pipeline loops back to `segmenter_node` (up to 3 attempts).
 **`async translator_node(state: TranslationState) -> dict`**
 
 Translates segments in batches using Chain-of-Thought reasoning.
+
+When `use_cot=False`, uses a simplified prompt (`build_simple_translation_prompt`) that only returns translations without situation_summary, character_events, or unknown_terms.
 
 **Batch grouping:**
 - Max 20,000 chars per batch
@@ -1908,6 +1914,44 @@ python build.py  # Uses PyInstaller
 ```
 
 ## Changelog
+
+### Session 2025-02-11
+
+**New features:**
+
+1. **Paragraph Break Preservation** — Added `has_preceding_break` flag to `SegmentData`. Segmenter now tracks double-newline boundaries. Both `finalize_node` and `get_editor_data` use these flags to insert `\n\n` between paragraphs and `\n` between lines with correct offset arithmetic. Frontend `ConnectedTextView` renders paragraph breaks with larger spacing.
+
+2. **Smart Quote Normalization** — Added `text_utils.py` with `normalize_quotes()` that converts smart quotes (U+201C, U+201D, U+2018, U+2019) to ASCII equivalents before sending text to LLMs. Applied in both main translation pipeline and retranslation path.
+
+3. **Source Text Preview** — Editor now shows source text in a two-column layout before translation is run, with proper paragraph and line break rendering.
+
+4. **CoT Toggle** — Added `use_cot` parameter to `TranslationState` and `pipeline_translate_chapter` handler. When disabled, uses `build_simple_translation_prompt()` for faster, cheaper translations without Chain-of-Thought reasoning. Frontend provides a toggle switch in the editor toolbar. `CoTReasoningPanel` shows informative message when CoT is disabled.
+
+**New files:**
+- `sidecar/src/fiction_translator/llm/prompts/text_utils.py` — Smart quote normalization
+- `sidecar/tests/test_text_utils.py` — 11 unit tests for quote normalization
+- `sidecar/tests/test_paragraph_breaks.py` — 8 unit tests for paragraph break handling
+
+**Modified files (backend):**
+- `pipeline/state.py` — Added `has_preceding_break` to SegmentData, `use_cot` to TranslationState
+- `pipeline/nodes/segmenter.py` — `_split_paragraphs()` now returns break flags
+- `pipeline/nodes/translator.py` — Conditional CoT/simple prompt, smart quote normalization
+- `pipeline/graph.py` — `finalize_node` uses variable separators for paragraph breaks
+- `services/chapter_service.py` — 4-phase `get_editor_data()` with break detection
+- `services/segment_service.py` — Smart quote normalization in retranslation
+- `ipc/handlers.py` — `use_cot` parameter support
+- `llm/prompts/cot_translation.py` — Added `build_simple_translation_prompt()`
+
+**Modified files (frontend):**
+- `src/pages/EditorPage.tsx` — Source text preview, CoT toggle switch
+- `src/components/editor/ConnectedTextView.tsx` — Paragraph break rendering
+- `src/components/editor/CoTReasoningPanel.tsx` — CoT disabled state
+- `src/stores/editor-store.ts` — `useCoT` state
+- `src/api/tauri-bridge.ts` — `useCot` parameter
+- `src/hooks/useTranslation.ts` — `useCot` pass-through
+- `src/components/translation/TranslateButton.tsx` — `useCot` prop
+
+---
 
 ### Session 2025-02-10
 
