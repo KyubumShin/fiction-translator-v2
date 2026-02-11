@@ -1915,6 +1915,21 @@ python build.py  # Uses PyInstaller
 
 ## Changelog
 
+### Session 2025-02-12
+
+**Bug fixes:**
+
+1. **Review Feedback "Translation Missing" Fix** — Fixed a bug where `translation_batches.review_feedback` in the DB always showed `"issue": "Translation missing"` even when translations existed. Root cause was twofold: (a) the translator's segment_id matching failed when the LLM returned IDs that didn't match expected order values, producing empty translations; (b) the finalize node stored the *input* feedback that triggered re-translation rather than the final review verdict. Added positional fallback matching in `translator_node` and updated `finalize_node` to store the final review state.
+
+2. **Empty Translation Warning Logs** — Added warning logs in `translator_node` (when translations come back empty) and `reviewer_node` (when segments have empty translated_text before review) for easier pipeline debugging.
+
+**Modified files (backend):**
+- `pipeline/nodes/translator.py` — Segment ID fallback matching when LLM returns mismatched IDs, empty translation warnings
+- `pipeline/graph.py` — `finalize_node` stores final `review_passed`/`review_feedback` state in batches instead of historical input feedback
+- `pipeline/nodes/reviewer.py` — Warning log for empty translated_text before sending to LLM review
+
+---
+
 ### Session 2025-02-11
 
 **New features:**

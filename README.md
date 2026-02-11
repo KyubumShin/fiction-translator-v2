@@ -307,6 +307,7 @@ Finalize (save results to database)
 - Chain-of-Thought reasoning preservation
 - Character persona learning
 - Smart quote normalization before LLM processing
+- Segment ID fallback matching for robust LLM response handling
 
 ## Supported Languages
 

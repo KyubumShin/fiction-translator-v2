@@ -215,7 +215,18 @@ async def finalize_node(state: TranslationState) -> dict:
         # Save translation batches and build batch_order -> db_id mapping
         batches = state.get("batches", [])
         batch_order_to_id: dict[int, int] = {}
+        final_review_passed = state.get("review_passed", True)
+        final_review_feedback = state.get("review_feedback", [])
+        final_review_iteration = state.get("review_iteration", 0)
         for batch_data in batches:
+            # Use final review feedback if the review passed (the batch-level
+            # feedback only records the *input* from the previous review that
+            # triggered re-translation, not the final verdict).
+            if final_review_passed:
+                stored_feedback = None
+            else:
+                stored_feedback = final_review_feedback or batch_data.get("review_feedback")
+
             db_batch = TranslationBatch(
                 chapter_id=chapter_id,
                 target_language=target_language,
@@ -228,8 +239,8 @@ async def finalize_node(state: TranslationState) -> dict:
                     "translations": batch_data.get("translations"),
                 },
                 segment_ids=batch_data.get("segment_ids"),
-                review_feedback=batch_data.get("review_feedback"),
-                review_iteration=batch_data.get("review_iteration", 0),
+                review_feedback=stored_feedback,
+                review_iteration=final_review_iteration,
             )
             db.add(db_batch)
             db.flush()

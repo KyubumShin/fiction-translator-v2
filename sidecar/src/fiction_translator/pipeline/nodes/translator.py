@@ -189,6 +189,19 @@ async def translator_node(state: TranslationState) -> dict:
             if sid is not None:
                 trans_lookup[sid] = text
 
+        # Fallback: if lookup missed all segments, try positional matching
+        matched = sum(1 for seg in batch_segments if trans_lookup.get(seg.get("order", 0)))
+        if matched == 0 and translations_raw:
+            logger.warning(
+                "Batch %d: segment_id mismatch. Expected orders %s, got IDs %s. "
+                "Using positional fallback.",
+                batch_idx,
+                [s.get("order") for s in batch_segments],
+                [t.get("segment_id") for t in translations_raw],
+            )
+            for seg, t in zip(batch_segments, translations_raw):
+                trans_lookup[seg.get("order", 0)] = t.get("text", "")
+
         # Create TranslatedSegment entries
         batch_seg_ids = []
         for seg in batch_segments:
@@ -207,6 +220,14 @@ async def translator_node(state: TranslationState) -> dict:
                 translated_end_offset=0,
                 batch_id=batch_idx,
             ))
+
+        # Warn if any translations came back empty
+        empty_count = sum(1 for t in new_translations[-len(batch_segments):] if not t.get("translated_text"))
+        if empty_count > 0:
+            logger.warning(
+                "Batch %d: %d/%d segments have empty translations",
+                batch_idx, empty_count, len(batch_segments),
+            )
 
         # Collect unknown terms from this batch
         for term in unknown_terms_raw:

@@ -1917,6 +1917,21 @@ python build.py  # PyInstaller 사용
 
 ## 변경 로그
 
+### 세션 2025-02-12
+
+**버그 수정:**
+
+1. **리뷰 피드백 "Translation Missing" 수정** — 번역이 존재함에도 DB의 `translation_batches.review_feedback`에 항상 `"issue": "Translation missing"`이 표시되는 버그 수정. 근본 원인은 두 가지: (a) LLM이 예상 순서 값과 일치하지 않는 ID를 반환할 때 번역기의 segment_id 매칭이 실패하여 빈 번역이 생성됨; (b) finalize 노드가 최종 리뷰 결과가 아닌 재번역을 트리거한 *입력* 피드백을 저장함. `translator_node`에 위치 기반 폴백 매칭을 추가하고 `finalize_node`를 최종 리뷰 상태를 저장하도록 업데이트.
+
+2. **빈 번역 경고 로그** — 파이프라인 디버깅을 위해 `translator_node`(빈 번역 반환 시)와 `reviewer_node`(리뷰 전 빈 translated_text가 있는 세그먼트)에 경고 로그 추가.
+
+**수정된 파일 (백엔드):**
+- `pipeline/nodes/translator.py` — LLM이 불일치 ID 반환 시 segment_id 폴백 매칭, 빈 번역 경고
+- `pipeline/graph.py` — `finalize_node`가 과거 입력 피드백 대신 최종 `review_passed`/`review_feedback` 상태를 배치에 저장
+- `pipeline/nodes/reviewer.py` — LLM 리뷰 전송 전 빈 translated_text 경고 로그
+
+---
+
 ### 세션 2025-02-11
 
 **새로운 기능:**

@@ -69,6 +69,14 @@ async def reviewer_node(state: TranslationState) -> dict:
                 "speaker": seg.get("speaker"),
             })
 
+        # Warn if any pairs have empty translations before sending to LLM
+        empty = [p["segment_id"] for p in pairs if not p.get("translated_text")]
+        if empty:
+            logger.warning(
+                "Review: %d segments have empty translated_text: %s",
+                len(empty), empty,
+            )
+
         # Review in chunks to avoid token limits (max ~30 pairs per call)
         all_reviews: list[dict] = []
         chunk_size = 30
