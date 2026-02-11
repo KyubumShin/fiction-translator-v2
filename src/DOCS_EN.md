@@ -64,6 +64,7 @@ src/
 │   ├── usePersonas.ts          # Persona CRUD
 │   ├── useTranslation.ts       # Translation trigger mutation
 │   ├── useProgress.ts          # Pipeline event listener
+│   ├── useToast.ts             # Toast notification state management
 │   └── useTheme.ts             # Theme management (dark/light/system)
 ├── pages/                      # Route pages
 │   ├── ProjectsPage.tsx        # Dashboard (project list + create)
@@ -79,6 +80,7 @@ src/
 │   │   ├── SideBySideEditor.tsx         # Layout with scroll sync
 │   │   ├── ConnectedTextView.tsx        # Segment-to-span renderer
 │   │   ├── InlineEditor.tsx             # Floating textarea editor
+│   │   ├── RetranslateDialog.tsx        # Re-translate segment with guidance
 │   │   ├── CoTReasoningPanel.tsx        # Chain-of-thought display
 │   │   └── SegmentHighlighter.tsx       # HOC for segment interaction
 │   ├── project/                # Project cards, chapter list
@@ -90,11 +92,17 @@ src/
 │   │   └── PipelineStageIndicator.tsx   # Individual stage status
 │   ├── knowledge/              # Glossary panel, persona panel
 │   │   ├── GlossaryPanel.tsx            # Term management UI
-│   │   └── PersonaPanel.tsx             # Character management UI
-│   └── ui/                     # Primitives (Button, Input, Dialog, Toast)
+│   │   ├── PersonaPanel.tsx             # Character management UI
+│   │   └── PersonaSummaryCard.tsx       # Persona card for grid display
+│   └── ui/                     # Shared primitives (Button, Input, Textarea, Select, Label, Dialog, Toast, ConfirmDialog)
 │       ├── Button.tsx
 │       ├── Input.tsx
+│       ├── Textarea.tsx
+│       ├── Select.tsx
+│       ├── Label.tsx
 │       ├── Dialog.tsx
+│       ├── ConfirmDialog.tsx
+│       ├── Toast.tsx
 │       └── ...
 ├── lib/                        # Utilities
 │   ├── cn.ts                   # Tailwind merge (clsx + twMerge)
@@ -576,6 +584,42 @@ export function useTheme() {
 
 ---
 
+### `useToast.ts`
+
+**Purpose:** Manages toast notification state for showing success/error/info messages.
+
+```typescript
+useToast() → { toast: ToastState | null, showToast: (message: string, type: ToastType) => void, hideToast: () => void }
+```
+
+**Types:**
+
+```typescript
+type ToastType = "info" | "success" | "error";
+
+interface ToastState {
+  message: string;
+  type: ToastType;
+}
+```
+
+**Usage:**
+
+```typescript
+const { toast, showToast, hideToast } = useToast();
+
+// Show a toast
+showToast("Settings saved!", "success");
+showToast("Connection failed", "error");
+
+// Render toast
+{toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+```
+
+**Note:** Replaces browser `alert()` calls which don't work reliably in Tauri's WebView.
+
+---
+
 ## Pages (`pages/`)
 
 ### `ProjectsPage.tsx`
@@ -671,7 +715,7 @@ export function useTheme() {
 4. **Default Languages:** Source and target language selectors
 5. **About:** Version info
 
-**Note:** API key storage not fully implemented yet (shows alert).
+**Note:** Uses toast notifications for feedback (save success, connection test results). API keys are stored via Tauri IPC to the Python sidecar backend.
 
 ---
 
@@ -689,6 +733,7 @@ interface SideBySideEditorProps {
   translatedText: string;
   segmentMap: SegmentMapEntry[];
   onSegmentEdit?: (segmentId: number, newText: string) => void;
+  onSegmentRetranslate?: (segmentId: number) => void;
 }
 ```
 
@@ -735,12 +780,14 @@ const handleSourceScroll = () => {
 ```typescript
 interface ConnectedTextViewProps {
   text: string;
+  sourceText?: string;
   segmentMap: SegmentMapEntry[];
   side: "source" | "translated";
   activeSegmentId: number | null;
   onSegmentClick: (segmentId: number) => void;
   onSegmentDoubleClick?: (segmentId: number) => void;
   onSegmentEdit?: (segmentId: number, newText: string) => void;
+  onSegmentRetranslate?: (segmentId: number) => void;
 }
 ```
 
@@ -800,6 +847,7 @@ interface ConnectedTextViewProps {
 interface InlineEditorProps {
   segmentId: number;
   initialText: string;
+  sourceText?: string;
   position: { top: number; left: number; width: number };
   onSave: (text: string) => void;
   onCancel: () => void;
@@ -812,6 +860,7 @@ interface InlineEditorProps {
   - `Cmd/Ctrl+Enter` — Save
   - `Escape` — Cancel
 - **Backdrop:** Dim background, click to cancel
+- **Source reference:** Shows original source text above the edit area when available
 - **Floating position:** Positioned absolutely over the segment
 
 **UI:**
@@ -1375,19 +1424,23 @@ Runs TypeScript compiler in check mode.
 
 ### Not Yet Implemented
 
-1. **Segment editing backend:** `onSegmentEdit` calls TODO API endpoint
-2. **Export functionality:** `handleExport` in EditorPage
-3. **API key storage:** Settings page shows alert instead of persisting
-4. **CoT reasoning data:** Currently shows placeholder, needs batch_id query
-5. **SegmentHighlighter component:** Referenced but may be implemented inline
-6. **PipelineStageIndicator component:** Referenced but not found in codebase
-7. **ProjectCard, ChapterList, GlossaryPanel, PersonaPanel components:** Imported but not in repository
+1. **CoT reasoning data:** Currently shows placeholder, needs batch_id query to fetch real reasoning
+2. **SegmentHighlighter component:** Referenced but may be implemented inline in `SideBySideEditor`
+3. **PipelineStageIndicator component:** Referenced but not found in codebase
+
+### Recently Implemented
+
+1. **Segment editing:** Inline editor with source text reference and re-translate with guidance
+2. **Export functionality:** Export translated content from EditorPage
+3. **API key storage:** Keys stored via Tauri IPC, with connection testing per provider
+4. **Shared UI components:** Extracted Textarea, Select, Label, ConfirmDialog as reusable forwardRef components
+5. **Toast notifications:** Replaced browser `alert()` with in-app toast system (useToast hook + Toast component)
+6. **ConfirmDialog:** Replaced browser `confirm()` with async-aware dialog component
+7. **All page/panel components:** ProjectCard, ChapterList, GlossaryPanel, PersonaPanel, PersonaSummaryCard all implemented
 
 ### Recommended Next Steps
 
-1. Implement segment update endpoint in sidecar
-2. Add export functionality (DOCX, TXT, JSON)
-3. Wire up API key storage via Tauri secure storage
-4. Fetch CoT reasoning from database based on batch_id
-5. Extract SegmentHighlighter to separate component if needed
-6. Create missing component files for project/knowledge panels
+1. Fetch CoT reasoning from database based on batch_id
+2. Add batch operations (translate multiple chapters)
+3. Add translation memory/cache for repeated phrases
+4. Implement collaborative editing features

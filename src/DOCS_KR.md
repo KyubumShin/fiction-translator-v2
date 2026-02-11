@@ -64,6 +64,7 @@ src/
 │   ├── usePersonas.ts          # 페르소나 CRUD
 │   ├── useTranslation.ts       # 번역 트리거 뮤테이션
 │   ├── useProgress.ts          # 파이프라인 이벤트 리스너
+│   ├── useToast.ts             # 토스트 알림 상태 관리
 │   └── useTheme.ts             # 테마 관리 (dark/light/system)
 ├── pages/                      # 라우트 페이지
 │   ├── ProjectsPage.tsx        # 대시보드 (프로젝트 목록 + 생성)
@@ -79,6 +80,7 @@ src/
 │   │   ├── SideBySideEditor.tsx         # 스크롤 동기화된 레이아웃
 │   │   ├── ConnectedTextView.tsx        # 세그먼트-to-span 렌더러
 │   │   ├── InlineEditor.tsx             # 플로팅 textarea 편집기
+│   │   ├── RetranslateDialog.tsx        # 가이던스와 함께 세그먼트 재번역
 │   │   ├── CoTReasoningPanel.tsx        # Chain-of-thought 표시
 │   │   └── SegmentHighlighter.tsx       # 세그먼트 상호작용 HOC
 │   ├── project/                # 프로젝트 카드, 챕터 목록
@@ -90,11 +92,17 @@ src/
 │   │   └── PipelineStageIndicator.tsx   # 개별 단계 상태
 │   ├── knowledge/              # 용어집 패널, 페르소나 패널
 │   │   ├── GlossaryPanel.tsx            # 용어 관리 UI
-│   │   └── PersonaPanel.tsx             # 캐릭터 관리 UI
-│   └── ui/                     # 프리미티브 (Button, Input, Dialog, Toast)
+│   │   ├── PersonaPanel.tsx             # 캐릭터 관리 UI
+│   │   └── PersonaSummaryCard.tsx       # 페르소나 카드 그리드 표시
+│   └── ui/                     # 공유 프리미티브 (Button, Input, Textarea, Select, Label, Dialog, Toast, ConfirmDialog)
 │       ├── Button.tsx
 │       ├── Input.tsx
+│       ├── Textarea.tsx
+│       ├── Select.tsx
+│       ├── Label.tsx
 │       ├── Dialog.tsx
+│       ├── ConfirmDialog.tsx
+│       ├── Toast.tsx
 │       └── ...
 ├── lib/                        # 유틸리티
 │   ├── cn.ts                   # Tailwind merge (clsx + twMerge)
@@ -576,6 +584,42 @@ export function useTheme() {
 
 ---
 
+### `useToast.ts`
+
+**목적:** 성공/오류/정보 메시지를 표시하기 위한 토스트 알림 상태 관리.
+
+```typescript
+useToast() → { toast: ToastState | null, showToast: (message: string, type: ToastType) => void, hideToast: () => void }
+```
+
+**타입:**
+
+```typescript
+type ToastType = "info" | "success" | "error";
+
+interface ToastState {
+  message: string;
+  type: ToastType;
+}
+```
+
+**사용법:**
+
+```typescript
+const { toast, showToast, hideToast } = useToast();
+
+// 토스트 표시
+showToast("설정이 저장되었습니다!", "success");
+showToast("연결 실패", "error");
+
+// 토스트 렌더링
+{toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+```
+
+**노트:** Tauri의 WebView에서 안정적으로 작동하지 않는 브라우저 `alert()` 호출을 대체합니다.
+
+---
+
 ## 페이지 (`pages/`)
 
 ### `ProjectsPage.tsx`
@@ -671,7 +715,7 @@ export function useTheme() {
 4. **기본 언어:** 원본 및 대상 언어 선택기
 5. **정보:** 버전 정보
 
-**노트:** API 키 저장이 아직 완전히 구현되지 않음 (알림 표시).
+**노트:** 피드백에 토스트 알림을 사용합니다 (저장 성공, 연결 테스트 결과). API 키는 Tauri IPC를 통해 Python 사이드카 백엔드에 저장됩니다.
 
 ---
 
@@ -689,6 +733,7 @@ interface SideBySideEditorProps {
   translatedText: string;
   segmentMap: SegmentMapEntry[];
   onSegmentEdit?: (segmentId: number, newText: string) => void;
+  onSegmentRetranslate?: (segmentId: number) => void;
 }
 ```
 
@@ -735,12 +780,14 @@ const handleSourceScroll = () => {
 ```typescript
 interface ConnectedTextViewProps {
   text: string;
+  sourceText?: string;
   segmentMap: SegmentMapEntry[];
   side: "source" | "translated";
   activeSegmentId: number | null;
   onSegmentClick: (segmentId: number) => void;
   onSegmentDoubleClick?: (segmentId: number) => void;
   onSegmentEdit?: (segmentId: number, newText: string) => void;
+  onSegmentRetranslate?: (segmentId: number) => void;
 }
 ```
 
@@ -800,6 +847,7 @@ interface ConnectedTextViewProps {
 interface InlineEditorProps {
   segmentId: number;
   initialText: string;
+  sourceText?: string;
   position: { top: number; left: number; width: number };
   onSave: (text: string) => void;
   onCancel: () => void;
@@ -812,6 +860,7 @@ interface InlineEditorProps {
   - `Cmd/Ctrl+Enter` — 저장
   - `Escape` — 취소
 - **배경:** 배경 흐리게, 클릭하면 취소
+- **원문 참조:** 사용 가능한 경우 편집 영역 위에 원본 소스 텍스트 표시
 - **플로팅 위치:** 세그먼트 위에 절대 위치 지정
 
 **UI:**
@@ -1375,19 +1424,23 @@ npm run typecheck
 
 ### 아직 구현되지 않음
 
-1. **세그먼트 편집 백엔드:** `onSegmentEdit`이 TODO API 엔드포인트 호출
-2. **내보내기 기능:** EditorPage의 `handleExport`
-3. **API 키 저장:** 설정 페이지가 지속하는 대신 알림 표시
-4. **CoT 추론 데이터:** 현재 플레이스홀더 표시, batch_id 쿼리 필요
-5. **SegmentHighlighter 컴포넌트:** 참조되지만 인라인으로 구현되었을 수 있음
-6. **PipelineStageIndicator 컴포넌트:** 참조되지만 코드베이스에서 찾을 수 없음
-7. **ProjectCard, ChapterList, GlossaryPanel, PersonaPanel 컴포넌트:** import되지만 저장소에 없음
+1. **CoT 추론 데이터:** 현재 플레이스홀더 표시, 실제 추론을 가져오기 위한 batch_id 쿼리 필요
+2. **SegmentHighlighter 컴포넌트:** 참조되지만 `SideBySideEditor`에 인라인으로 구현되었을 수 있음
+3. **PipelineStageIndicator 컴포넌트:** 참조되지만 코드베이스에서 찾을 수 없음
+
+### 최근 구현됨
+
+1. **세그먼트 편집:** 원문 참조 및 가이던스와 함께 재번역이 가능한 인라인 편집기
+2. **내보내기 기능:** EditorPage에서 번역된 콘텐츠 내보내기
+3. **API 키 저장:** Tauri IPC를 통해 키 저장, 프로바이더별 연결 테스트
+4. **공유 UI 컴포넌트:** Textarea, Select, Label, ConfirmDialog를 재사용 가능한 forwardRef 컴포넌트로 추출
+5. **토스트 알림:** 브라우저 `alert()`를 인앱 토스트 시스템으로 대체 (useToast 훅 + Toast 컴포넌트)
+6. **ConfirmDialog:** 브라우저 `confirm()`을 비동기 인식 대화상자 컴포넌트로 대체
+7. **모든 페이지/패널 컴포넌트:** ProjectCard, ChapterList, GlossaryPanel, PersonaPanel, PersonaSummaryCard 모두 구현됨
 
 ### 권장 다음 단계
 
-1. 사이드카에 세그먼트 업데이트 엔드포인트 구현
-2. 내보내기 기능 추가 (DOCX, TXT, JSON)
-3. Tauri 보안 저장소를 통한 API 키 저장 연결
-4. batch_id를 기반으로 데이터베이스에서 CoT 추론 가져오기
-5. 필요한 경우 SegmentHighlighter를 별도 컴포넌트로 추출
-6. project/knowledge 패널용 누락된 컴포넌트 파일 생성
+1. batch_id를 기반으로 데이터베이스에서 CoT 추론 가져오기
+2. 일괄 작업 추가 (여러 챕터 번역)
+3. 반복되는 구문을 위한 번역 메모리/캐시 추가
+4. 협업 편집 기능 구현
