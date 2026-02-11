@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { useGlossary, useCreateGlossaryEntry, useUpdateGlossaryEntry, useDeleteGlossaryEntry } from "@/hooks/useGlossary";
 import type { GlossaryEntry } from "@/api/types";
 import { cn } from "@/lib/cn";
@@ -99,8 +100,7 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <select
-              className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            <Select
               value={formData.term_type}
               onChange={(e) => setFormData({ ...formData, term_type: e.target.value })}
             >
@@ -109,7 +109,7 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
                   {type.charAt(0).toUpperCase() + type.slice(1)}
                 </option>
               ))}
-            </select>
+            </Select>
             <Input
               placeholder="Notes (optional)"
               value={formData.notes}

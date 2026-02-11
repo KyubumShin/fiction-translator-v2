@@ -9,6 +9,9 @@ import { CoTReasoningPanel } from "@/components/editor/CoTReasoningPanel";
 import { ProgressOverlay } from "@/components/translation/ProgressOverlay";
 import { TranslateButton } from "@/components/translation/TranslateButton";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
+import { Toast } from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 import { LANGUAGES, type LanguageCode } from "@/lib/constants";
 import { api } from "@/api/tauri-bridge";
 
@@ -21,6 +24,7 @@ export function EditorPage() {
   const [targetLanguage, setTargetLanguage] = useState<LanguageCode>("en");
   const [exporting, setExporting] = useState(false);
   const [retranslateSegmentId, setRetranslateSegmentId] = useState<number | null>(null);
+  const { toast, showToast, hideToast } = useToast();
 
   const { data: chapter, isLoading: chapterLoading } = useChapter(id);
   const { data: editorData, isLoading: editorLoading } = useEditorData(id, targetLanguage);
@@ -43,10 +47,10 @@ export function EditorPage() {
     setExporting(true);
     try {
       const result = await api.exportChapterTxt(id, targetLanguage);
-      alert(`Exported to: ${result.path}`);
+      showToast(`Exported to: ${result.path}`, "success");
     } catch (err) {
       console.error("Export failed:", err);
-      alert("Export failed. Please try again.");
+      showToast("Export failed. Please try again.", "error");
     } finally {
       setExporting(false);
     }
@@ -114,17 +118,17 @@ export function EditorPage() {
 
           <div className="flex items-center gap-3">
             {/* Language Selector */}
-            <select
+            <Select
+              className="h-9 w-auto"
               value={targetLanguage}
               onChange={(e) => setTargetLanguage(e.target.value as LanguageCode)}
-              className="h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {Object.entries(LANGUAGES).map(([code, name]) => (
                 <option key={code} value={code}>
                   {name}
                 </option>
               ))}
-            </select>
+            </Select>
 
             <TranslateButton
               chapterId={id!}
@@ -182,6 +186,9 @@ export function EditorPage() {
         currentTranslation={retranslateCurrentTranslation}
         onRetranslate={handleRetranslateSubmit}
       />
+
+      {/* Toast Notifications */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

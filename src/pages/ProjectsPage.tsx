@@ -4,6 +4,9 @@ import { useProjects, useCreateProject } from "@/hooks/useProject";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { Select } from "@/components/ui/Select";
+import { Label } from "@/components/ui/Label";
 import { ProjectCard } from "@/components/project/ProjectCard";
 
 export function ProjectsPage() {
@@ -115,7 +118,7 @@ export function ProjectsPage() {
         <DialogContent>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5">Project Name *</label>
+              <Label>Project Name *</Label>
               <Input
                 placeholder="My Translation Project"
                 value={formData.name}
@@ -125,9 +128,8 @@ export function ProjectsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Description</label>
-              <textarea
-                className="flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              <Label>Description</Label>
+              <Textarea
                 placeholder="Brief description of the project..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -136,9 +138,8 @@ export function ProjectsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5">Source Language *</label>
-                <select
-                  className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                <Label>Source Language *</Label>
+                <Select
                   value={formData.source_language}
                   onChange={(e) => setFormData({ ...formData, source_language: e.target.value })}
                 >
@@ -147,13 +148,12 @@ export function ProjectsPage() {
                       {lang.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1.5">Target Language *</label>
-                <select
-                  className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                <Label>Target Language *</Label>
+                <Select
                   value={formData.target_language}
                   onChange={(e) => setFormData({ ...formData, target_language: e.target.value })}
                 >
@@ -162,12 +162,12 @@ export function ProjectsPage() {
                       {lang.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Genre</label>
+              <Label>Genre</Label>
               <Input
                 placeholder="e.g., Fantasy, Romance, Sci-Fi"
                 value={formData.genre}

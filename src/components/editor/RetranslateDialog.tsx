@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
 
 interface RetranslateDialogProps {
   open: boolean;
@@ -68,11 +69,11 @@ export function RetranslateDialog({
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             Translation Guide
           </label>
-          <textarea
+          <Textarea
+            className="mt-1 min-h-[100px] resize-none"
             value={userGuide}
             onChange={(e) => setUserGuide(e.target.value)}
             placeholder='Write instructions to guide the re-translation, e.g., "Use a more formal tone" or "The character is being sarcastic"'
-            className="mt-1 w-full min-h-[100px] p-3 bg-background border border-input rounded-lg text-sm resize-none outline-none focus:ring-2 focus:ring-ring"
             disabled={isLoading}
           />
         </div>

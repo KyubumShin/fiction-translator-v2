@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { Select } from "@/components/ui/Select";
+import { Label } from "@/components/ui/Label";
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from "@/components/ui/Dialog";
 import { usePersonas, useCreatePersona, useUpdatePersona, useDeletePersona } from "@/hooks/usePersonas";
 import { PersonaSummaryCard } from "./PersonaSummaryCard";
@@ -139,7 +142,7 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium mb-1.5">Name *</label>
+              <Label>Name *</Label>
               <Input
                 placeholder="Character name"
                 value={formData.name}
@@ -148,7 +151,7 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Aliases</label>
+              <Label>Aliases</Label>
               <Input
                 placeholder="Comma-separated aliases"
                 value={formData.aliases}
@@ -158,9 +161,8 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Personality</label>
-              <textarea
-                className="flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              <Label>Personality</Label>
+              <Textarea
                 placeholder="Describe personality traits..."
                 value={formData.personality}
                 onChange={(e) => setFormData({ ...formData, personality: e.target.value })}
@@ -168,7 +170,7 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Speech Style</label>
+              <Label>Speech Style</Label>
               <Input
                 placeholder="e.g., formal, casual, rough"
                 value={formData.speech_style}
@@ -177,9 +179,9 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">
+              <Label>
                 Formality Level: {formData.formality_level}
-              </label>
+              </Label>
               <input
                 type="range"
                 min="1"
@@ -195,9 +197,8 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Age Group</label>
-              <select
-                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              <Label>Age Group</Label>
+              <Select
                 value={formData.age_group}
                 onChange={(e) => setFormData({ ...formData, age_group: e.target.value })}
               >
@@ -208,7 +209,7 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
                 <option value="adult">Adult</option>
                 <option value="middle_aged">Middle Aged</option>
                 <option value="elderly">Elderly</option>
-              </select>
+              </Select>
             </div>
           </div>
         </DialogContent>

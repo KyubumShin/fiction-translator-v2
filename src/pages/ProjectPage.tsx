@@ -5,6 +5,9 @@ import { useCreateChapter } from "@/hooks/useChapter";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { Label } from "@/components/ui/Label";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ChapterList } from "@/components/project/ChapterList";
 import { GlossaryPanel } from "@/components/knowledge/GlossaryPanel";
 import { PersonaPanel } from "@/components/knowledge/PersonaPanel";
@@ -26,6 +29,7 @@ export function ProjectPage() {
   const [activeTab, setActiveTab] = useState<Tab>("chapters");
   const [isAddChapterOpen, setIsAddChapterOpen] = useState(false);
   const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const [chapterForm, setChapterForm] = useState({
     title: "",
@@ -72,13 +76,14 @@ export function ProjectPage() {
     setIsEditProjectOpen(false);
   };
 
-  const handleDeleteProject = async () => {
-    if (!projectId) return;
+  const handleDeleteProject = () => {
+    setIsDeleteConfirmOpen(true);
+  };
 
-    if (confirm(`Delete project "${project?.name}"? This cannot be undone.`)) {
-      await deleteProject.mutateAsync(projectId);
-      navigate("/");
-    }
+  const handleConfirmDelete = async () => {
+    if (!projectId) return;
+    await deleteProject.mutateAsync(projectId);
+    navigate("/");
   };
 
   if (isLoading) {
@@ -202,7 +207,7 @@ export function ProjectPage() {
         <DialogContent>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5">Chapter Title *</label>
+              <Label>Chapter Title *</Label>
               <Input
                 placeholder="Chapter 1: The Beginning"
                 value={chapterForm.title}
@@ -212,9 +217,9 @@ export function ProjectPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Source Content</label>
-              <textarea
-                className="flex min-h-[200px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono"
+              <Label>Source Content</Label>
+              <Textarea
+                className="min-h-[200px] font-mono"
                 placeholder="Paste your source text here..."
                 value={chapterForm.source_content}
                 onChange={(e) => setChapterForm({ ...chapterForm, source_content: e.target.value })}
@@ -247,7 +252,7 @@ export function ProjectPage() {
         <DialogContent>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5">Project Name *</label>
+              <Label>Project Name *</Label>
               <Input
                 placeholder="My Translation Project"
                 value={projectForm.name}
@@ -256,9 +261,8 @@ export function ProjectPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Description</label>
-              <textarea
-                className="flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              <Label>Description</Label>
+              <Textarea
                 placeholder="Brief description of the project..."
                 value={projectForm.description}
                 onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
@@ -280,6 +284,17 @@ export function ProjectPage() {
           </Button>
         </DialogFooter>
       </Dialog>
+
+      <ConfirmDialog
+        open={isDeleteConfirmOpen}
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Project"
+        message={`Delete project "${project?.name}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        loadingLabel="Deleting..."
+        variant="destructive"
+      />
     </div>
   );
 }

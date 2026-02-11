@@ -3,11 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { useAppStore } from "@/stores/app-store";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Label } from "@/components/ui/Label";
+import { Toast } from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 import { api } from "@/api/tauri-bridge";
 
 export function SettingsPage() {
   const navigate = useNavigate();
   const { theme, setTheme } = useAppStore();
+  const { toast, showToast, hideToast } = useToast();
 
   const [apiKeys, setApiKeys] = useState({
     gemini: "",
@@ -84,12 +89,12 @@ export function SettingsPage() {
     try {
       const result = await api.testProvider(providerKey);
       if (result.success) {
-        alert(`${provider} connection successful!`);
+        showToast(`${provider} connection successful!`, "success");
       } else {
-        alert(`${provider} connection failed: ${result.error || "Unknown error"}`);
+        showToast(`${provider} connection failed: ${result.error || "Unknown error"}`, "error");
       }
     } catch (error) {
-      alert(`${provider} connection failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      showToast(`${provider} connection failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error");
     } finally {
       setTesting({ ...testing, [providerKey]: false });
     }
@@ -116,9 +121,9 @@ export function SettingsPage() {
       // Clear the input fields
       setApiKeys({ gemini: "", claude: "", openai: "" });
 
-      alert("API keys saved successfully!");
+      showToast("API keys saved successfully!", "success");
     } catch (error) {
-      alert(`Failed to save API keys: ${error instanceof Error ? error.message : "Unknown error"}`);
+      showToast(`Failed to save API keys: ${error instanceof Error ? error.message : "Unknown error"}`, "error");
     } finally {
       setSaving(false);
     }
@@ -143,7 +148,7 @@ export function SettingsPage() {
           <h2 className="text-lg font-semibold mb-4">Appearance</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Theme</label>
+              <Label className="mb-2">Theme</Label>
               <div className="flex gap-2">
                 {(["light", "dark", "system"] as const).map((t) => (
                   <Button
@@ -170,10 +175,10 @@ export function SettingsPage() {
           <div className="space-y-4">
             {/* Gemini */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <Label className="mb-2">
                 Google Gemini API Key
                 {keysExist.gemini && <span className="ml-2 text-xs text-green-500">●</span>}
-              </label>
+              </Label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
@@ -208,10 +213,10 @@ export function SettingsPage() {
 
             {/* Claude */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <Label className="mb-2">
                 Anthropic Claude API Key
                 {keysExist.claude && <span className="ml-2 text-xs text-green-500">●</span>}
-              </label>
+              </Label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
@@ -246,10 +251,10 @@ export function SettingsPage() {
 
             {/* OpenAI */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <Label className="mb-2">
                 OpenAI API Key
                 {keysExist.openai && <span className="ml-2 text-xs text-green-500">●</span>}
-              </label>
+              </Label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
@@ -312,9 +317,8 @@ export function SettingsPage() {
           <h2 className="text-lg font-semibold mb-4">Default Languages</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Default Source Language</label>
-              <select
-                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              <Label className="mb-2">Default Source Language</Label>
+              <Select
                 value={defaultLanguages.source}
                 onChange={(e) => setDefaultLanguages({ ...defaultLanguages, source: e.target.value })}
               >
@@ -323,13 +327,12 @@ export function SettingsPage() {
                     {lang.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Default Target Language</label>
-              <select
-                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              <Label className="mb-2">Default Target Language</Label>
+              <Select
                 value={defaultLanguages.target}
                 onChange={(e) => setDefaultLanguages({ ...defaultLanguages, target: e.target.value })}
               >
@@ -338,7 +341,7 @@ export function SettingsPage() {
                     {lang.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
         </div>
@@ -362,6 +365,7 @@ export function SettingsPage() {
           </div>
         </div>
       </div>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

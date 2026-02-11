@@ -15,7 +15,6 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
     ? segmentMap.find((entry) => entry.segment_id === activeSegmentId)
     : null;
   const batchId = activeSegment?.batch_id;
-  console.log('[CoT Debug] activeSegmentId:', activeSegmentId, 'activeSegment:', activeSegment, 'batchId:', batchId);
 
   // Fetch reasoning data when batch_id is available
   const { data: reasoningData } = useQuery({
@@ -23,7 +22,6 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
     queryFn: () => api.getBatchReasoning(batchId!),
     enabled: !!batchId,
   });
-  console.log('[CoT Debug] reasoningData:', reasoningData);
 
   if (!activeSegmentId) {
     return null;
