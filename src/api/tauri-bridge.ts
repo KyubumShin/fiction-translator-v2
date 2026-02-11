@@ -82,8 +82,8 @@ export const api = {
   deletePersona: (personaId: number) => rpc("persona.delete", { persona_id: personaId }),
 
   // Pipeline
-  translateChapter: (chapterId: number, targetLanguage: string = "en") =>
-    rpc("pipeline.translate_chapter", { chapter_id: chapterId, target_language: targetLanguage }),
+  translateChapter: (chapterId: number, targetLanguage: string = "en", useCot: boolean = true) =>
+    rpc("pipeline.translate_chapter", { chapter_id: chapterId, target_language: targetLanguage, use_cot: useCot }),
   cancelPipeline: () => rpc("pipeline.cancel"),
 
   // Segments

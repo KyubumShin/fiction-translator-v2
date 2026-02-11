@@ -9,6 +9,7 @@ from fiction_translator.services.glossary_service import get_glossary_map
 from fiction_translator.services.persona_service import get_personas_context
 from fiction_translator.llm.prompts.cot_translation import build_cot_translation_prompt
 from fiction_translator.llm.providers import get_llm_provider
+from fiction_translator.llm.prompts.text_utils import normalize_quotes
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ async def retranslate_segments(
     for seg in segments:
         seg_dicts.append({
             "id": seg.id,
-            "text": seg.source_text,
+            "text": normalize_quotes(seg.source_text),
             "type": seg.segment_type,
             "speaker": seg.speaker,
         })

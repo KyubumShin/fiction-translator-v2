@@ -128,7 +128,7 @@ def _rule_based_segment(
     segments: list[SegmentData] = []
     order = 0
 
-    for para_text, para_start in paragraphs:
+    for para_text, para_start, has_break in paragraphs:
         stripped = para_text.strip()
         if not stripped:
             continue
@@ -144,29 +144,38 @@ def _rule_based_segment(
             speaker=speaker,
             source_start_offset=para_start + (len(para_text) - len(para_text.lstrip())),
             source_end_offset=para_start + len(para_text.rstrip()),
+            has_preceding_break=has_break,
         ))
         order += 1
 
     return segments
 
 
-def _split_paragraphs(text: str) -> list[tuple[str, int]]:
-    """Split text on double-newline boundaries, tracking start offsets.
+def _split_paragraphs(text: str) -> list[tuple[str, int, bool]]:
+    """Split text on double-newline boundaries, tracking start offsets and breaks.
 
-    Returns list of (paragraph_text, start_offset) tuples.  Single-newline
-    boundaries inside a paragraph are preserved.
+    Returns list of (paragraph_text, start_offset, has_preceding_break) tuples.
+    Single-newline boundaries inside a paragraph are preserved.
     """
-    results: list[tuple[str, int]] = []
+    results: list[tuple[str, int, bool]] = []
     # Split on one or more blank lines (two+ consecutive newlines)
     parts = re.split(r'(\n\s*\n)', text)
 
     offset = 0
+    found_first = False
+    last_was_separator = False
     for part in parts:
         stripped = part.strip()
         if stripped:
             # Find the actual start within the part (skip leading whitespace)
             leading = len(part) - len(part.lstrip())
-            results.append((stripped, offset + leading))
+            has_break = last_was_separator and found_first
+            results.append((stripped, offset + leading, has_break))
+            found_first = True
+            last_was_separator = False
+        else:
+            # This is a separator (blank line gap)
+            last_was_separator = True
         offset += len(part)
 
     return results
@@ -252,6 +261,7 @@ def _parse_llm_segments(
             speaker=seg.get("speaker"),
             source_start_offset=start_offset,
             source_end_offset=end_offset,
+            has_preceding_break=False,
         ))
         order += 1
 

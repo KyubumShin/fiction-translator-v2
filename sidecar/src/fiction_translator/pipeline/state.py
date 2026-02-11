@@ -13,6 +13,7 @@ class SegmentData(TypedDict, total=False):
     speaker: str | None
     source_start_offset: int
     source_end_offset: int
+    has_preceding_break: bool
 
 
 class TranslatedSegment(TypedDict, total=False):
@@ -53,6 +54,7 @@ class TranslationState(TypedDict, total=False):
     target_language: str
     llm_provider: str
     api_keys: dict[str, str]
+    use_cot: bool
 
     # ── Context (loaded from DB) ─────────────────────────────────────
     glossary: dict[str, str]

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChapter, useEditorData } from "@/hooks/useChapter";
@@ -14,6 +14,8 @@ import { Toast } from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 import { LANGUAGES, type LanguageCode } from "@/lib/constants";
 import { api } from "@/api/tauri-bridge";
+import { useEditorStore } from "@/stores/editor-store";
+import { cn } from "@/lib/cn";
 
 export function EditorPage() {
   const { chapterId } = useParams<{ chapterId: string }>();
@@ -25,6 +27,9 @@ export function EditorPage() {
   const [exporting, setExporting] = useState(false);
   const [retranslateSegmentId, setRetranslateSegmentId] = useState<number | null>(null);
   const { toast, showToast, hideToast } = useToast();
+
+  const useCoT = useEditorStore((s) => s.useCoT);
+  const setUseCoT = useEditorStore((s) => s.setUseCoT);
 
   const { data: chapter, isLoading: chapterLoading } = useChapter(id);
   const { data: editorData, isLoading: editorLoading } = useEditorData(id, targetLanguage);
@@ -130,9 +135,30 @@ export function EditorPage() {
               ))}
             </Select>
 
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>CoT</span>
+              <button
+                role="switch"
+                aria-checked={useCoT}
+                onClick={() => setUseCoT(!useCoT)}
+                className={cn(
+                  "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                  useCoT ? "bg-primary" : "bg-muted-foreground/30"
+                )}
+              >
+                <span
+                  className={cn(
+                    "inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform",
+                    useCoT ? "translate-x-[18px]" : "translate-x-[2px]"
+                  )}
+                />
+              </button>
+            </label>
+
             <TranslateButton
               chapterId={id!}
               targetLanguage={targetLanguage}
+              useCot={useCoT}
               disabled={!sourceText}
             />
 
@@ -161,16 +187,41 @@ export function EditorPage() {
           <CoTReasoningPanel chapterId={id!} />
         </>
       ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md">
-            <p className="text-muted-foreground mb-4">
-              No translation data yet. Click "Translate" to begin processing this chapter.
-            </p>
-            {!sourceText && (
-              <p className="text-sm text-muted-foreground">
-                Note: This chapter has no source content.
-              </p>
+        <div className="flex-1 flex overflow-hidden">
+          {/* Source text preview */}
+          <div className="flex-1 overflow-auto p-8">
+            <h2 className="text-xs font-semibold text-muted-foreground mb-6 uppercase tracking-wide">
+              Source Text
+            </h2>
+            {sourceText ? (
+              <div className="prose prose-slate dark:prose-invert max-w-none">
+                <div className="leading-relaxed text-[15px]" style={{ lineHeight: "1.8" }}>
+                  {sourceText.split(/\n\s*\n/).map((para, i) => (
+                    <p key={i} className="mb-4">
+                      {para.split('\n').map((line, j, arr) => (
+                        <Fragment key={j}>
+                          {line}
+                          {j < arr.length - 1 && <br />}
+                        </Fragment>
+                      ))}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground">
+                <p>No source content. Add source text to this chapter first.</p>
+              </div>
             )}
+          </div>
+
+          {/* Right side: placeholder */}
+          <div className="flex-1 border-l border-border flex items-center justify-center bg-card/30">
+            <div className="text-center max-w-xs">
+              <p className="text-muted-foreground text-sm">
+                Click "Translate" to generate the translation for this chapter.
+              </p>
+            </div>
           </div>
         </div>
       )}

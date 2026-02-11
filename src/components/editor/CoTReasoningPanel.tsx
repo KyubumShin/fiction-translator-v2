@@ -9,6 +9,7 @@ interface CoTReasoningPanelProps {
 
 export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelProps) {
   const { activeSegmentId, showReasoning, toggleReasoning, segmentMap } = useEditorStore();
+  const useCoT = useEditorStore((s) => s.useCoT);
 
   // Find batch_id for the active segment
   const activeSegment = activeSegmentId
@@ -53,7 +54,12 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
 
       {showReasoning && (
         <div className="px-6 py-4 space-y-4 text-sm border-t border-border/50">
-          {!batchId ? (
+          {!useCoT ? (
+            <p className="text-muted-foreground italic">
+              Chain-of-Thought reasoning was not used for this translation.
+              Enable the CoT toggle and re-translate to see reasoning data.
+            </p>
+          ) : !batchId ? (
             <p className="text-muted-foreground italic">
               Reasoning data is not available for this segment. It may not have been translated yet, or the translation did not include Chain-of-Thought reasoning.
             </p>

@@ -5,15 +5,16 @@ import { usePipelineStore } from "@/stores/pipeline-store";
 interface TranslateButtonProps {
   chapterId: number;
   targetLanguage: string;
+  useCot?: boolean;
   disabled?: boolean;
 }
 
-export function TranslateButton({ chapterId, targetLanguage, disabled }: TranslateButtonProps) {
+export function TranslateButton({ chapterId, targetLanguage, useCot = true, disabled }: TranslateButtonProps) {
   const { mutate: translate, isPending } = useTranslateChapter();
   const isRunning = usePipelineStore((s) => s.isRunning);
 
   const handleClick = () => {
-    translate({ chapterId, targetLanguage });
+    translate({ chapterId, targetLanguage, useCot });
   };
 
   return (

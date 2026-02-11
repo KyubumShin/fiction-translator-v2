@@ -1,6 +1,8 @@
 """Chapter CRUD service with editor data support."""
 from __future__ import annotations
 
+import re
+
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from fiction_translator.db.models import Chapter, Segment, Translation, TranslationStatus
@@ -101,52 +103,94 @@ def get_editor_data(db: Session, chapter_id: int, target_language: str = "en") -
             "segment_map": [],
         }
 
-    # Build connected text from segments
-    source_parts = []
-    translated_parts = []
-    segment_map = []
+    source_content = chapter.source_content or ""
 
-    source_offset = 0
-    translated_offset = 0
-
+    # Build translation lookup (one query per segment, cached)
+    translation_map: dict[int, "Translation | None"] = {}
     for seg in segments:
-        source_text = seg.source_text
-
-        # Get translation for this segment
-        translation = db.query(Translation).filter(
+        translation_map[seg.id] = db.query(Translation).filter(
             Translation.segment_id == seg.id,
             Translation.target_language == target_language,
         ).first()
 
-        translated_text = translation.translated_text if translation and translation.translated_text else ""
+    # Phase 1: Determine paragraph breaks between segments
+    has_break_list: list[bool] = [False]  # first segment never has a preceding break
 
-        # Track offsets
+    for i in range(1, len(segments)):
+        prev_end = segments[i - 1].source_end_offset
+        curr_start = segments[i].source_start_offset
+
+        has_break = False
+        if prev_end is not None and curr_start is not None and prev_end <= curr_start:
+            gap = source_content[prev_end:curr_start]
+            has_break = bool(re.search(r'\n\s*\n', gap))
+        has_break_list.append(has_break)
+
+    # Phase 2: Build source connected text with variable separators
+    source_parts: list[str] = []
+    source_offset = 0
+    source_starts: list[int] = []
+    source_ends: list[int] = []
+
+    for i, seg in enumerate(segments):
+        source_text = seg.source_text
+
+        if i > 0:
+            separator = "\n\n" if has_break_list[i] else "\n"
+            source_parts.append(separator)
+            source_offset += len(separator)
+
         source_start = source_offset
         source_end = source_offset + len(source_text)
+        source_starts.append(source_start)
+        source_ends.append(source_end)
+
+        source_parts.append(source_text)
+        source_offset = source_end
+
+    source_connected = "".join(source_parts)
+
+    # Phase 3: Build translated connected text with variable separators
+    translated_parts: list[str] = []
+    translated_offset = 0
+    translated_starts: list[int] = []
+    translated_ends: list[int] = []
+
+    for i, seg in enumerate(segments):
+        translation = translation_map.get(seg.id)
+        translated_text = translation.translated_text if translation and translation.translated_text else ""
+
+        if i > 0 and translated_text and translated_parts:
+            separator = "\n\n" if has_break_list[i] else "\n"
+            translated_parts.append(separator)
+            translated_offset += len(separator)
+
         translated_start = translated_offset
         translated_end = translated_offset + len(translated_text)
+        translated_starts.append(translated_start)
+        translated_ends.append(translated_end)
+
+        if translated_text:
+            translated_parts.append(translated_text)
+            translated_offset = translated_end
+
+    translated_connected = "".join(translated_parts)
+
+    # Phase 4: Build segment_map
+    segment_map = []
+    for i, seg in enumerate(segments):
+        translation = translation_map.get(seg.id)
 
         segment_map.append({
             "segment_id": seg.id,
-            "source_start": source_start,
-            "source_end": source_end,
-            "translated_start": translated_start,
-            "translated_end": translated_end,
+            "source_start": source_starts[i],
+            "source_end": source_ends[i],
+            "translated_start": translated_starts[i],
+            "translated_end": translated_ends[i],
             "type": seg.segment_type,
             "speaker": seg.speaker,
             "batch_id": translation.batch_id if translation else None,
         })
-
-        source_parts.append(source_text)
-        if translated_text:
-            translated_parts.append(translated_text)
-
-        # Add separator (newline between segments for prose flow)
-        source_offset = source_end + 1  # +1 for newline
-        translated_offset = translated_end + (1 if translated_text else 0)
-
-    source_connected = "\n".join(source_parts)
-    translated_connected = "\n".join(translated_parts)
 
     return {
         "source_connected_text": source_connected,

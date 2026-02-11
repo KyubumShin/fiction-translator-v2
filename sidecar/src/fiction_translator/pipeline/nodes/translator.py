@@ -16,6 +16,7 @@ from fiction_translator.pipeline.state import (
     SegmentData,
 )
 from fiction_translator.pipeline.callbacks import notify
+from fiction_translator.llm.prompts.text_utils import normalize_quotes
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ async def translator_node(state: TranslationState) -> dict:
     review_feedback = state.get("review_feedback", [])
     previous_translations = state.get("translated_segments", [])
     callback = state.get("progress_callback")
+    use_cot = state.get("use_cot", True)
 
     api_keys = state.get("api_keys", {})
     if not api_keys:
@@ -45,6 +47,7 @@ async def translator_node(state: TranslationState) -> dict:
     from fiction_translator.llm.providers import get_llm_provider
     from fiction_translator.llm.prompts.cot_translation import (
         build_cot_translation_prompt,
+        build_simple_translation_prompt,
     )
 
     provider = get_llm_provider(
@@ -106,7 +109,7 @@ async def translator_node(state: TranslationState) -> dict:
             seg_order = seg.get("order", 0)
             prompt_segments.append({
                 "id": seg_order,
-                "text": seg.get("text", ""),
+                "text": normalize_quotes(seg.get("text", "")),
                 "type": seg.get("type", "narrative"),
                 "speaker": seg.get("speaker"),
             })
@@ -122,15 +125,26 @@ async def translator_node(state: TranslationState) -> dict:
             if not batch_feedback:
                 batch_feedback = None
 
-        prompt = build_cot_translation_prompt(
-            segments=prompt_segments,
-            source_language=source_language,
-            target_language=target_language,
-            glossary=glossary,
-            personas_context=personas_context,
-            style_context=style_context,
-            review_feedback=batch_feedback,
-        )
+        if use_cot:
+            prompt = build_cot_translation_prompt(
+                segments=prompt_segments,
+                source_language=source_language,
+                target_language=target_language,
+                glossary=glossary,
+                personas_context=personas_context,
+                style_context=style_context,
+                review_feedback=batch_feedback,
+            )
+        else:
+            prompt = build_simple_translation_prompt(
+                segments=prompt_segments,
+                source_language=source_language,
+                target_language=target_language,
+                glossary=glossary,
+                personas_context=personas_context,
+                style_context=style_context,
+                review_feedback=batch_feedback,
+            )
 
         try:
             result = await provider.generate_json(
@@ -155,11 +169,17 @@ async def translator_node(state: TranslationState) -> dict:
                 ))
             continue
 
-        # Parse CoT response
-        situation_summary = result.get("situation_summary", "")
-        character_events = result.get("character_events", [])
+        # Parse response
+        if use_cot:
+            situation_summary = result.get("situation_summary", "")
+            character_events = result.get("character_events", [])
+            unknown_terms_raw = result.get("unknown_terms", [])
+        else:
+            situation_summary = ""
+            character_events = []
+            unknown_terms_raw = []
+
         translations_raw = result.get("translations", [])
-        unknown_terms_raw = result.get("unknown_terms", [])
 
         # Build a lookup of translations by segment_id
         trans_lookup: dict[int, str] = {}

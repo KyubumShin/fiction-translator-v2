@@ -96,8 +96,22 @@ async def finalize_node(state: TranslationState) -> dict:
     offset = 0
     segment_map: list[dict] = []
 
-    for seg in sorted_segs:
+    for i, seg in enumerate(sorted_segs):
         text = seg.get("translated_text", "")
+
+        # Add separator before this segment (not before the first one)
+        if i > 0:
+            # Find matching source segment to check for paragraph break
+            seg_id = seg.get("segment_id", seg.get("order", 0))
+            has_break = False
+            for src_seg in segments:
+                if src_seg.get("order") == seg_id:
+                    has_break = src_seg.get("has_preceding_break", False)
+                    break
+            separator = "\n\n" if has_break else "\n"
+            offset += len(separator)
+            parts.append(separator)
+
         start = offset
         end = offset + len(text)
 
@@ -123,9 +137,9 @@ async def finalize_node(state: TranslationState) -> dict:
         })
 
         parts.append(text)
-        offset = end + 1  # +1 for newline separator
+        offset = end
 
-    connected = "\n".join(parts)
+    connected = "".join(parts)
 
     # ── Persist to database ──────────────────────────────────────────
     from fiction_translator.db.session import get_db

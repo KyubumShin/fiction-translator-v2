@@ -214,7 +214,7 @@ async def persona_delete(persona_id: int) -> dict:
 
 
 # --- Pipeline ---
-async def pipeline_translate_chapter(chapter_id: int, target_language: str = "en", **kwargs) -> dict:
+async def pipeline_translate_chapter(chapter_id: int, target_language: str = "en", use_cot: bool = True, **kwargs) -> dict:
     """Start chapter translation pipeline."""
     db = get_db()
     try:
@@ -225,6 +225,7 @@ async def pipeline_translate_chapter(chapter_id: int, target_language: str = "en
             target_language=target_language,
             api_keys=_api_keys,
             progress_callback=send_progress,
+            use_cot=use_cot,
             **kwargs,
         )
         return result

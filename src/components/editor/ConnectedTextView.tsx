@@ -125,29 +125,38 @@ export function ConnectedTextView({
   return (
     <div ref={containerRef} className="relative prose prose-slate dark:prose-invert max-w-none">
       <div className="leading-relaxed text-[15px]" style={{ lineHeight: "1.8" }}>
-        {segments.map((segment) => (
-          <span
-            key={segment.id}
-            data-segment-id={segment.id}
-            onClick={() => handleClick(segment.id)}
-            onDoubleClick={(e) => handleDoubleClick(segment.id, e)}
-            className={cn(
-              "segment cursor-pointer transition-all duration-150 rounded-sm",
-              activeSegmentId === segment.id && "segment-active",
-              segment.type === "dialogue" && "segment-dialogue",
-              side === "source" && "text-muted-foreground/90"
-            )}
-          >
-            {segment.text.split('\n').map((line, i, arr) => (
-              <Fragment key={i}>
-                {line}
-                {i < arr.length - 1 && (
-                  <span className="block mt-3" />
+        {segments.map((segment, index) => {
+          // Determine if there's a paragraph break before this segment
+          const prevSegment = index > 0 ? segments[index - 1] : null;
+          const hasParagraphBreak = prevSegment
+            ? text.slice(prevSegment.end, segment.start).includes('\n\n')
+            : false;
+
+          return (
+            <Fragment key={segment.id}>
+              {hasParagraphBreak && <span className="block mt-4" />}
+              {!hasParagraphBreak && index > 0 && <span className="block mt-1" />}
+              <span
+                data-segment-id={segment.id}
+                onClick={() => handleClick(segment.id)}
+                onDoubleClick={(e) => handleDoubleClick(segment.id, e)}
+                className={cn(
+                  "segment cursor-pointer transition-all duration-150 rounded-sm",
+                  activeSegmentId === segment.id && "segment-active",
+                  segment.type === "dialogue" && "segment-dialogue",
+                  side === "source" && "text-muted-foreground/90"
                 )}
-              </Fragment>
-            ))}
-          </span>
-        ))}
+              >
+                {segment.text.split('\n').map((line, i, arr) => (
+                  <Fragment key={i}>
+                    {line}
+                    {i < arr.length - 1 && <span className="block mt-3" />}
+                  </Fragment>
+                ))}
+              </span>
+            </Fragment>
+          );
+        })}
       </div>
 
       {editingSegmentId !== null && editorPosition && editingSegment && (

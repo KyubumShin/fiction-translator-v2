@@ -12,6 +12,8 @@ interface EditorState {
   setSegmentMap: (map: SegmentMapEntry[]) => void;
   showReasoning: boolean;
   toggleReasoning: () => void;
+  useCoT: boolean;
+  setUseCoT: (value: boolean) => void;
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -25,4 +27,6 @@ export const useEditorStore = create<EditorState>((set) => ({
   setSegmentMap: (map) => set({ segmentMap: map }),
   showReasoning: false,
   toggleReasoning: () => set((s) => ({ showReasoning: !s.showReasoning })),
+  useCoT: true,
+  setUseCoT: (value) => set({ useCoT: value }),
 }));
