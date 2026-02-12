@@ -33,23 +33,21 @@ jobs:
       - uses: actions/checkout@v4
 
       # Python Sidecar
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
         with:
           python-version: '3.11'
-          cache: pip
 
       - name: Install sidecar dependencies
         run: |
           cd sidecar
-          pip install -e ".[bundle]"
-          pip install pyinstaller
+          uv sync --extra bundle
 
       - name: Build sidecar binary
         shell: bash
         run: |
           cd sidecar
-          pyinstaller --onefile --name fiction-translator-sidecar \
+          uv run pyinstaller --onefile --name fiction-translator-sidecar \
             --hidden-import fiction_translator \
             --hidden-import fiction_translator.ipc \
             --hidden-import fiction_translator.db \

@@ -54,7 +54,7 @@ def export_chapter_docx(db: Session, chapter_id: int, target_language: str = "en
     try:
         from docx import Document
     except ImportError:
-        raise RuntimeError("python-docx not installed. Install with: pip install python-docx")
+        raise RuntimeError("python-docx not installed. Install with: uv add python-docx")
 
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:

@@ -234,7 +234,7 @@ fiction-translator-v2/
 2. **Python Sidecar**
    ```bash
    cd sidecar
-   pip install -e .
+   uv sync
    ```
 
 ### Development Commands
