@@ -7,7 +7,6 @@ loops, only the flagged segments are re-translated.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from fiction_translator.pipeline.state import (
     TranslationState,
@@ -16,7 +15,12 @@ from fiction_translator.pipeline.state import (
     SegmentData,
 )
 from fiction_translator.pipeline.callbacks import notify
-from fiction_translator.llm.prompts.text_utils import normalize_quotes
+from fiction_translator.llm.prompts.text_utils import (
+    normalize_quotes,
+    apply_glossary_exchange,
+    build_glossary_pattern,
+    filter_glossary_for_batch,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +89,7 @@ async def translator_node(state: TranslationState) -> dict:
     batches_input = _group_segments_into_batches(segments_to_translate)
 
     glossary = state.get("glossary", {})
+    glossary_pattern = build_glossary_pattern(glossary)
     personas_context = state.get("personas_context", "")
     style_context = state.get("style_context", "")
     source_language = state.get("source_language", "ko")
@@ -105,14 +110,22 @@ async def translator_node(state: TranslationState) -> dict:
 
         # Build prompt segments with their IDs
         prompt_segments = []
+        batch_source_texts = []
         for seg in batch_segments:
             seg_order = seg.get("order", 0)
+            raw_text = normalize_quotes(seg.get("text", ""))
+            batch_source_texts.append(raw_text)
+            exchanged_text = apply_glossary_exchange(
+                raw_text, glossary, glossary_pattern,
+            )
             prompt_segments.append({
                 "id": seg_order,
-                "text": normalize_quotes(seg.get("text", "")),
+                "text": exchanged_text,
                 "type": seg.get("type", "narrative"),
                 "speaker": seg.get("speaker"),
             })
+
+        batch_glossary = filter_glossary_for_batch(glossary, batch_source_texts)
 
         # Collect any feedback for segments in this batch
         batch_feedback = None
@@ -130,7 +143,7 @@ async def translator_node(state: TranslationState) -> dict:
                 segments=prompt_segments,
                 source_language=source_language,
                 target_language=target_language,
-                glossary=glossary,
+                glossary=batch_glossary,
                 personas_context=personas_context,
                 style_context=style_context,
                 review_feedback=batch_feedback,
@@ -140,7 +153,7 @@ async def translator_node(state: TranslationState) -> dict:
                 segments=prompt_segments,
                 source_language=source_language,
                 target_language=target_language,
-                glossary=glossary,
+                glossary=batch_glossary,
                 personas_context=personas_context,
                 style_context=style_context,
                 review_feedback=batch_feedback,

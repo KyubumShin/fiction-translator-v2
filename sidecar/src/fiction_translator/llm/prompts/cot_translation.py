@@ -53,7 +53,7 @@ def build_cot_translation_prompt(
     if glossary:
         entries = "\n".join(f"  {k} -> {v}" for k, v in glossary.items())
         glossary_section = f"""
-## Glossary (MUST use these translations)
+## Glossary Reference (terms pre-applied in source text — verify correct usage)
 {entries}
 """
 
@@ -169,7 +169,7 @@ def build_simple_translation_prompt(
     if glossary:
         entries = "\n".join(f"  {k} -> {v}" for k, v in glossary.items())
         glossary_section = f"""
-## Glossary (MUST use these translations)
+## Glossary Reference (terms pre-applied in source text — verify correct usage)
 {entries}
 """
 
