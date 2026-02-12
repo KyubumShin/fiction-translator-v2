@@ -161,6 +161,7 @@ fiction-translator-v2/
 │
 ├── sidecar/                           # Python Sidecar (LangGraph)
 │   ├── pyproject.toml                 # Python 의존성 및 프로젝트 설정
+│   ├── uv.lock                        # uv 잠금 파일 (재현 가능한 설치용)
 │   └── src/fiction_translator/
 │       ├── main.py                    # 진입점: DB 초기화 + JSON-RPC 서버 시작
 │       ├── ipc/
@@ -220,8 +221,9 @@ fiction-translator-v2/
 
 ### 필수 요구 사항
 
-- Node.js 18+
+- Node.js 20+
 - Python 3.11+
+- [uv](https://docs.astral.sh/uv/) (Python 패키지 매니저)
 - Rust 툴체인 (Tauri 개발용)
 
 ### 설치
