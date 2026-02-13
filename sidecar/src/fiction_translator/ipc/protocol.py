@@ -1,8 +1,9 @@
 """JSON-RPC 2.0 protocol types and helpers."""
 from __future__ import annotations
-from dataclasses import dataclass, field, asdict
-from typing import Any, Optional
+
 import json
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -36,7 +37,7 @@ class JsonRpcResponse:
     """JSON-RPC 2.0 Response."""
     id: int | str | None
     result: Any = None
-    error: Optional[JsonRpcError] = None
+    error: JsonRpcError | None = None
     jsonrpc: str = "2.0"
 
     def to_json(self) -> str:

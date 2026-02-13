@@ -2,14 +2,20 @@
 from __future__ import annotations
 
 import asyncio
-import sys
-import json
 import logging
-from typing import Callable, Awaitable, Any
+import sys
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from .protocol import (
-    JsonRpcRequest, JsonRpcResponse, JsonRpcError, JsonRpcNotification,
-    parse_message, METHOD_NOT_FOUND, INTERNAL_ERROR, PARSE_ERROR,
+    INTERNAL_ERROR,
+    METHOD_NOT_FOUND,
+    PARSE_ERROR,
+    JsonRpcError,
+    JsonRpcNotification,
+    JsonRpcRequest,
+    JsonRpcResponse,
+    parse_message,
 )
 
 logger = logging.getLogger(__name__)
@@ -22,6 +28,11 @@ class JsonRpcServer:
         self._handlers: dict[str, Callable[..., Awaitable[Any]]] = {}
         self._running = False
         self._write_lock = asyncio.Lock()
+
+        # Register handlers eagerly
+        from .handlers import get_all_handlers, set_server
+        self.register_all(get_all_handlers())
+        set_server(self)
 
     def register(self, method: str, handler: Callable[..., Awaitable[Any]]):
         """Register a method handler."""
@@ -37,10 +48,16 @@ class JsonRpcServer:
         await self._write(notification.to_json())
 
     async def _write(self, message: str):
-        """Write a message to stdout (thread-safe)."""
+        """Write a message to stdout (non-blocking)."""
         async with self._write_lock:
-            sys.stdout.write(message + "\n")
-            sys.stdout.flush()
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, self._sync_write, message)
+
+    @staticmethod
+    def _sync_write(message: str):
+        """Synchronous write helper for run_in_executor."""
+        sys.stdout.write(message + "\n")
+        sys.stdout.flush()
 
     async def _handle_request(self, request: JsonRpcRequest) -> JsonRpcResponse | None:
         """Process a single request."""
@@ -80,9 +97,7 @@ class JsonRpcServer:
         logger.info("JSON-RPC server starting on stdin/stdout")
         self._running = True
 
-        # Register handlers from the handlers module
-        from .handlers import get_all_handlers
-        self.register_all(get_all_handlers())
+        # Handlers registered in __init__
 
         reader = asyncio.StreamReader()
         protocol = asyncio.StreamReaderProtocol(reader)
