@@ -1,15 +1,55 @@
 """JSON-RPC method handlers."""
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import Any, Callable, Awaitable
+from typing import Any
 
+from fiction_translator.db.models import Translation, TranslationBatch
 from fiction_translator.db.session import get_db
+from fiction_translator.services.chapter_service import (
+    create_chapter,
+    delete_chapter,
+    get_chapter,
+    get_editor_data,
+    list_chapters,
+    update_chapter,
+)
+from fiction_translator.services.export_service import export_chapter_docx, export_chapter_txt
+from fiction_translator.services.glossary_service import (
+    create_glossary_entry,
+    delete_glossary_entry,
+    list_glossary,
+    update_glossary_entry,
+)
+from fiction_translator.services.persona_service import (
+    create_persona,
+    delete_persona,
+    list_personas,
+    update_persona,
+)
+from fiction_translator.services.project_service import (
+    create_project,
+    delete_project,
+    get_project,
+    list_projects,
+    update_project,
+)
+from fiction_translator.services.segment_service import retranslate_segments
 
 logger = logging.getLogger(__name__)
 
 # Global reference to the server for sending notifications
 _server = None
+
+# Global cancellation event
+_cancel_event: asyncio.Event | None = None
+
+def _get_cancel_event() -> asyncio.Event:
+    global _cancel_event
+    if _cancel_event is None:
+        _cancel_event = asyncio.Event()
+    return _cancel_event
 
 def set_server(server):
     global _server
@@ -31,22 +71,41 @@ async def health_check() -> dict:
 
 
 # --- Config ---
-_api_keys: dict[str, str] = {}
+class _ApiKeyStore:
+    """Thread-safe API key storage."""
+    def __init__(self):
+        self._keys: dict[str, str] = {}
+        self._lock = asyncio.Lock()
+
+    async def update(self, keys: dict[str, str]) -> list[str]:
+        async with self._lock:
+            self._keys.update(keys)
+            return list(keys.keys())
+
+    async def get_status(self) -> dict[str, bool]:
+        async with self._lock:
+            return {k: bool(v) for k, v in self._keys.items()}
+
+    def snapshot(self) -> dict[str, str]:
+        """Return a snapshot for passing to pipeline (read-only copy)."""
+        return dict(self._keys)
+
+_key_store = _ApiKeyStore()
 
 async def config_set_keys(**keys: str) -> dict:
     """Store API keys in memory (received from Tauri keychain)."""
-    _api_keys.update(keys)
-    return {"stored": list(keys.keys())}
+    stored = await _key_store.update(keys)
+    return {"stored": stored}
 
 async def config_get_keys() -> dict:
     """Return which providers have keys configured."""
-    return {k: bool(v) for k, v in _api_keys.items()}
+    return await _key_store.get_status()
 
 async def config_test_provider(provider: str) -> dict:
     """Test if an LLM provider is working."""
     from fiction_translator.llm.providers import get_llm_provider
     try:
-        p = get_llm_provider(provider, api_keys=_api_keys)
+        p = get_llm_provider(provider, api_keys=_key_store.snapshot())
         response = await p.generate("Say 'hello' in one word.", max_tokens=10)
         return {"success": True, "response": response.text[:100]}
     except Exception as e:
@@ -57,7 +116,6 @@ async def config_test_provider(provider: str) -> dict:
 async def project_list() -> list[dict]:
     db = get_db()
     try:
-        from fiction_translator.services.project_service import list_projects
         return list_projects(db)
     finally:
         db.close()
@@ -65,7 +123,6 @@ async def project_list() -> list[dict]:
 async def project_create(name: str, source_language: str = "ko", target_language: str = "en", **kwargs) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.project_service import create_project
         return create_project(db, name=name, source_language=source_language, target_language=target_language, **kwargs)
     finally:
         db.close()
@@ -73,7 +130,6 @@ async def project_create(name: str, source_language: str = "ko", target_language
 async def project_get(project_id: int) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.project_service import get_project
         return get_project(db, project_id)
     finally:
         db.close()
@@ -81,7 +137,6 @@ async def project_get(project_id: int) -> dict:
 async def project_update(project_id: int, **kwargs) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.project_service import update_project
         return update_project(db, project_id, **kwargs)
     finally:
         db.close()
@@ -89,7 +144,6 @@ async def project_update(project_id: int, **kwargs) -> dict:
 async def project_delete(project_id: int) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.project_service import delete_project
         return delete_project(db, project_id)
     finally:
         db.close()
@@ -99,7 +153,6 @@ async def project_delete(project_id: int) -> dict:
 async def chapter_list(project_id: int) -> list[dict]:
     db = get_db()
     try:
-        from fiction_translator.services.chapter_service import list_chapters
         return list_chapters(db, project_id)
     finally:
         db.close()
@@ -107,7 +160,6 @@ async def chapter_list(project_id: int) -> list[dict]:
 async def chapter_create(project_id: int, title: str, source_content: str = "", **kwargs) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.chapter_service import create_chapter
         return create_chapter(db, project_id=project_id, title=title, source_content=source_content, **kwargs)
     finally:
         db.close()
@@ -115,7 +167,6 @@ async def chapter_create(project_id: int, title: str, source_content: str = "", 
 async def chapter_get(chapter_id: int) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.chapter_service import get_chapter
         return get_chapter(db, chapter_id)
     finally:
         db.close()
@@ -123,7 +174,6 @@ async def chapter_get(chapter_id: int) -> dict:
 async def chapter_update(chapter_id: int, **kwargs) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.chapter_service import update_chapter
         return update_chapter(db, chapter_id, **kwargs)
     finally:
         db.close()
@@ -131,7 +181,6 @@ async def chapter_update(chapter_id: int, **kwargs) -> dict:
 async def chapter_delete(chapter_id: int) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.chapter_service import delete_chapter
         return delete_chapter(db, chapter_id)
     finally:
         db.close()
@@ -139,7 +188,6 @@ async def chapter_delete(chapter_id: int) -> dict:
 async def chapter_get_editor_data(chapter_id: int, target_language: str = "en") -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.chapter_service import get_editor_data
         return get_editor_data(db, chapter_id, target_language)
     finally:
         db.close()
@@ -149,7 +197,6 @@ async def chapter_get_editor_data(chapter_id: int, target_language: str = "en") 
 async def glossary_list(project_id: int) -> list[dict]:
     db = get_db()
     try:
-        from fiction_translator.services.glossary_service import list_glossary
         return list_glossary(db, project_id)
     finally:
         db.close()
@@ -157,7 +204,6 @@ async def glossary_list(project_id: int) -> list[dict]:
 async def glossary_create(project_id: int, source_term: str, translated_term: str, **kwargs) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.glossary_service import create_glossary_entry
         return create_glossary_entry(db, project_id=project_id, source_term=source_term, translated_term=translated_term, **kwargs)
     finally:
         db.close()
@@ -165,7 +211,6 @@ async def glossary_create(project_id: int, source_term: str, translated_term: st
 async def glossary_update(entry_id: int, **kwargs) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.glossary_service import update_glossary_entry
         return update_glossary_entry(db, entry_id, **kwargs)
     finally:
         db.close()
@@ -173,7 +218,6 @@ async def glossary_update(entry_id: int, **kwargs) -> dict:
 async def glossary_delete(entry_id: int) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.glossary_service import delete_glossary_entry
         return delete_glossary_entry(db, entry_id)
     finally:
         db.close()
@@ -183,7 +227,6 @@ async def glossary_delete(entry_id: int) -> dict:
 async def persona_list(project_id: int) -> list[dict]:
     db = get_db()
     try:
-        from fiction_translator.services.persona_service import list_personas
         return list_personas(db, project_id)
     finally:
         db.close()
@@ -191,7 +234,6 @@ async def persona_list(project_id: int) -> list[dict]:
 async def persona_create(project_id: int, name: str, **kwargs) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.persona_service import create_persona
         return create_persona(db, project_id=project_id, name=name, **kwargs)
     finally:
         db.close()
@@ -199,7 +241,6 @@ async def persona_create(project_id: int, name: str, **kwargs) -> dict:
 async def persona_update(persona_id: int, **kwargs) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.persona_service import update_persona
         return update_persona(db, persona_id, **kwargs)
     finally:
         db.close()
@@ -207,7 +248,6 @@ async def persona_update(persona_id: int, **kwargs) -> dict:
 async def persona_delete(persona_id: int) -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.persona_service import delete_persona
         return delete_persona(db, persona_id)
     finally:
         db.close()
@@ -216,6 +256,10 @@ async def persona_delete(persona_id: int) -> dict:
 # --- Pipeline ---
 async def pipeline_translate_chapter(chapter_id: int, target_language: str = "en", use_cot: bool = True, **kwargs) -> dict:
     """Start chapter translation pipeline."""
+    # Clear any previous cancellation
+    event = _get_cancel_event()
+    event.clear()
+
     db = get_db()
     try:
         from fiction_translator.pipeline.graph import run_translation_pipeline
@@ -223,9 +267,10 @@ async def pipeline_translate_chapter(chapter_id: int, target_language: str = "en
             db=db,
             chapter_id=chapter_id,
             target_language=target_language,
-            api_keys=_api_keys,
+            api_keys=_key_store.snapshot(),
             progress_callback=send_progress,
             use_cot=use_cot,
+            cancel_event=event,
             **kwargs,
         )
         return result
@@ -234,7 +279,8 @@ async def pipeline_translate_chapter(chapter_id: int, target_language: str = "en
 
 async def pipeline_cancel() -> dict:
     """Cancel running pipeline."""
-    # TODO: implement cancellation
+    event = _get_cancel_event()
+    event.set()
     return {"cancelled": True}
 
 
@@ -242,7 +288,6 @@ async def pipeline_cancel() -> dict:
 async def export_chapter_txt_handler(chapter_id: int, target_language: str = "en") -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.export_service import export_chapter_txt
         return export_chapter_txt(db, chapter_id, target_language)
     finally:
         db.close()
@@ -250,7 +295,6 @@ async def export_chapter_txt_handler(chapter_id: int, target_language: str = "en
 async def export_chapter_docx_handler(chapter_id: int, target_language: str = "en") -> dict:
     db = get_db()
     try:
-        from fiction_translator.services.export_service import export_chapter_docx
         return export_chapter_docx(db, chapter_id, target_language)
     finally:
         db.close()
@@ -261,7 +305,6 @@ async def segment_update_translation(segment_id: int, translated_text: str, targ
     """Update a segment's translation text."""
     db = get_db()
     try:
-        from fiction_translator.db.models import Translation
         translation = db.query(Translation).filter(
             Translation.segment_id == segment_id,
             Translation.target_language == target_language,
@@ -281,13 +324,12 @@ async def segment_retranslate(segment_ids: list[int], target_language: str = "en
     """Re-translate specific segments with user guidance."""
     db = get_db()
     try:
-        from fiction_translator.services.segment_service import retranslate_segments
         return await retranslate_segments(
             db=db,
             segment_ids=segment_ids,
             target_language=target_language,
             user_guide=user_guide,
-            api_keys=_api_keys,
+            api_keys=_key_store.snapshot(),
         )
     finally:
         db.close()
@@ -298,7 +340,6 @@ async def batch_get_reasoning(batch_id: int) -> dict:
     """Get CoT reasoning data for a translation batch."""
     db = get_db()
     try:
-        from fiction_translator.db.models import TranslationBatch
         batch = db.query(TranslationBatch).filter(TranslationBatch.id == batch_id).first()
         if not batch:
             return {"found": False}

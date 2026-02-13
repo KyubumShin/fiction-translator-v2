@@ -7,14 +7,57 @@ Provides unified interface for multiple LLM APIs:
 - OpenAI GPT
 """
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Optional, Any
+
+import asyncio as _asyncio
 import json
 import logging
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Any
+
 import httpx
 
 logger = logging.getLogger(__name__)
+
+MAX_LLM_RETRIES = 3
+RETRY_BASE_DELAY = 1.0  # seconds
+
+
+async def _retry_generate(coro_factory, max_retries=MAX_LLM_RETRIES):
+    """Retry an async LLM call with exponential backoff.
+
+    Parameters
+    ----------
+    coro_factory : callable
+        A zero-argument callable that returns a new coroutine each time.
+    max_retries : int
+        Maximum number of attempts.
+    """
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            return await coro_factory()
+        except httpx.HTTPStatusError as e:
+            last_error = e
+            status = e.response.status_code
+            # Don't retry client errors (except 429 rate limit)
+            if 400 <= status < 500 and status != 429:
+                raise
+            delay = RETRY_BASE_DELAY * (2 ** attempt)
+            logger.warning(
+                "LLM API error (attempt %d/%d, status %d): %s. Retrying in %.1fs...",
+                attempt + 1, max_retries, status, e, delay,
+            )
+            await _asyncio.sleep(delay)
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.WriteTimeout) as e:
+            last_error = e
+            delay = RETRY_BASE_DELAY * (2 ** attempt)
+            logger.warning(
+                "LLM connection error (attempt %d/%d): %s. Retrying in %.1fs...",
+                attempt + 1, max_retries, e, delay,
+            )
+            await _asyncio.sleep(delay)
+    raise last_error
 
 
 @dataclass
@@ -23,7 +66,7 @@ class LLMResponse:
     text: str
     model: str
     usage: dict
-    raw_response: Optional[Any] = None
+    raw_response: Any | None = None
 
 
 class LLMProvider(ABC):
@@ -33,7 +76,7 @@ class LLMProvider(ABC):
     async def generate(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         temperature: float = 0.3,
         max_tokens: int = 4096,
     ) -> LLMResponse:
@@ -43,7 +86,7 @@ class LLMProvider(ABC):
     async def generate_json(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         temperature: float = 0.2,
         max_tokens: int = 4096,
     ) -> dict:
@@ -70,7 +113,7 @@ class LLMProvider(ABC):
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from LLM response: {e}")
             logger.debug(f"Raw response: {response.text}")
-            raise ValueError(f"LLM did not return valid JSON: {e}")
+            raise ValueError(f"LLM did not return valid JSON: {e}") from e
 
     @abstractmethod
     def is_available(self) -> bool:
@@ -92,7 +135,7 @@ class GeminiProvider(LLMProvider):
     async def generate(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         temperature: float = 0.3,
         max_tokens: int = 4096,
     ) -> LLMResponse:
@@ -101,25 +144,27 @@ class GeminiProvider(LLMProvider):
 
         url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
 
-        # Build content parts
-        parts = []
-        if system_prompt:
-            parts.append({"text": system_prompt})
-        parts.append({"text": prompt})
-
         payload = {
-            "contents": [{"parts": parts}],
+            "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": temperature,
                 "topP": 0.9,
                 "maxOutputTokens": max_tokens,
-            }
+            },
         }
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-            data = response.json()
+        if system_prompt:
+            payload["systemInstruction"] = {
+                "parts": [{"text": system_prompt}]
+            }
+
+        async def _call():
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(url, json=payload)
+                response.raise_for_status()
+                return response.json()
+
+        data = await _retry_generate(_call)
 
         # Extract text from response
         text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -154,7 +199,7 @@ class ClaudeProvider(LLMProvider):
     async def generate(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         temperature: float = 0.3,
         max_tokens: int = 4096,
     ) -> LLMResponse:
@@ -181,10 +226,13 @@ class ClaudeProvider(LLMProvider):
         if system_prompt:
             payload["system"] = system_prompt
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
+        async def _call():
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(url, headers=headers, json=payload)
+                response.raise_for_status()
+                return response.json()
+
+        data = await _retry_generate(_call)
 
         # Extract text from response
         text = data["content"][0]["text"]
@@ -216,7 +264,7 @@ class OpenAIProvider(LLMProvider):
     async def generate(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         temperature: float = 0.3,
         max_tokens: int = 4096,
     ) -> LLMResponse:
@@ -242,10 +290,13 @@ class OpenAIProvider(LLMProvider):
             "max_tokens": max_tokens,
         }
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
+        async def _call():
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(url, headers=headers, json=payload)
+                response.raise_for_status()
+                return response.json()
+
+        data = await _retry_generate(_call)
 
         # Extract text from response
         text = data["choices"][0]["message"]["content"]
@@ -273,8 +324,8 @@ PROVIDERS = {
 
 def get_llm_provider(
     provider_name: str = "gemini",
-    api_keys: Optional[dict[str, str]] = None,
-    model: Optional[str] = None,
+    api_keys: dict[str, str] | None = None,
+    model: str | None = None,
 ) -> LLMProvider:
     """
     Factory function to get an LLM provider.

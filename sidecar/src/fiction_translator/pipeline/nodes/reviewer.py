@@ -7,10 +7,9 @@ the review loop (up to 2 iterations).
 from __future__ import annotations
 
 import logging
-from typing import Any
 
-from fiction_translator.pipeline.state import TranslationState
 from fiction_translator.pipeline.callbacks import notify
+from fiction_translator.pipeline.state import TranslationState
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +20,10 @@ async def reviewer_node(state: TranslationState) -> dict:
     Returns review_passed, review_feedback, review_iteration, and
     flagged_segments.
     """
+    from fiction_translator.pipeline.callbacks import check_cancelled
+
+    await check_cancelled(state)
+
     translated_segments = state.get("translated_segments", [])
     review_iteration = state.get("review_iteration", 0) + 1
     callback = state.get("progress_callback")
@@ -50,8 +53,8 @@ async def reviewer_node(state: TranslationState) -> dict:
         }
 
     try:
-        from fiction_translator.llm.providers import get_llm_provider
         from fiction_translator.llm.prompts.review import build_review_prompt
+        from fiction_translator.llm.providers import get_llm_provider
 
         provider = get_llm_provider(
             state.get("llm_provider", "gemini"),
@@ -83,6 +86,8 @@ async def reviewer_node(state: TranslationState) -> dict:
         overall_passed = True
 
         for i in range(0, len(pairs), chunk_size):
+            await check_cancelled(state)
+
             chunk = pairs[i:i + chunk_size]
             pct = i / max(len(pairs), 1)
             await notify(

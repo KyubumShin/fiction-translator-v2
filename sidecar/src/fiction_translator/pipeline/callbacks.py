@@ -1,7 +1,14 @@
 """Progress callback utilities for the translation pipeline."""
 from __future__ import annotations
 
-from typing import Callable, Awaitable, Any, Optional
+from collections.abc import Awaitable, Callable
+from typing import Any
+
+
+class PipelineCancelled(Exception):
+    """Raised when the pipeline is cancelled by user request."""
+    pass
+
 
 ProgressCallback = Callable[[str, float, str], Awaitable[None]]
 
@@ -27,6 +34,13 @@ def stage_progress(stage: str) -> float:
         return 0.0
     idx = PIPELINE_STAGES.index(stage)
     return (idx + 1) / len(PIPELINE_STAGES)
+
+
+async def check_cancelled(state: dict) -> None:
+    """Check if the pipeline has been cancelled and raise if so."""
+    cancel_event = state.get("cancel_event")
+    if cancel_event is not None and cancel_event.is_set():
+        raise PipelineCancelled("Pipeline cancelled by user")
 
 
 async def notify(

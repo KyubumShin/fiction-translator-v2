@@ -1,7 +1,7 @@
 """Translation pipeline state definition for LangGraph."""
 from __future__ import annotations
 
-from typing import TypedDict, Optional, Any
+from typing import Any, TypedDict
 
 
 class SegmentData(TypedDict, total=False):
@@ -96,6 +96,7 @@ class TranslationState(TypedDict, total=False):
     # ── Pipeline metadata ────────────────────────────────────────────
     pipeline_run_id: int | None
     progress_callback: Any          # async callable(stage, pct, msg)
+    cancel_event: Any               # asyncio.Event for cancellation
     error: str | None
     total_tokens: int
     total_cost: float

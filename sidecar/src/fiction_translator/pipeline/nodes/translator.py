@@ -8,18 +8,18 @@ from __future__ import annotations
 
 import logging
 
-from fiction_translator.pipeline.state import (
-    TranslationState,
-    TranslatedSegment,
-    BatchData,
-    SegmentData,
-)
-from fiction_translator.pipeline.callbacks import notify
 from fiction_translator.llm.prompts.text_utils import (
-    normalize_quotes,
     apply_glossary_exchange,
     build_glossary_pattern,
     filter_glossary_for_batch,
+    normalize_quotes,
+)
+from fiction_translator.pipeline.callbacks import notify
+from fiction_translator.pipeline.state import (
+    BatchData,
+    SegmentData,
+    TranslatedSegment,
+    TranslationState,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,10 @@ async def translator_node(state: TranslationState) -> dict:
     segments are re-translated; the rest are preserved from the previous
     iteration.
     """
+    from fiction_translator.pipeline.callbacks import check_cancelled
+
+    await check_cancelled(state)
+
     segments = state.get("segments", [])
     flagged_ids = state.get("flagged_segments", [])
     review_iteration = state.get("review_iteration", 0)
@@ -48,11 +52,11 @@ async def translator_node(state: TranslationState) -> dict:
     if not api_keys:
         raise ValueError("No API keys provided for translation")
 
-    from fiction_translator.llm.providers import get_llm_provider
     from fiction_translator.llm.prompts.cot_translation import (
         build_cot_translation_prompt,
         build_simple_translation_prompt,
     )
+    from fiction_translator.llm.providers import get_llm_provider
 
     provider = get_llm_provider(
         state.get("llm_provider", "gemini"),
@@ -102,6 +106,8 @@ async def translator_node(state: TranslationState) -> dict:
     total_cost = state.get("total_cost", 0.0)
 
     for batch_idx, batch_segments in enumerate(batches_input):
+        await check_cancelled(state)
+
         pct = batch_idx / max(len(batches_input), 1)
         await notify(
             callback, "translation", pct,
@@ -212,7 +218,7 @@ async def translator_node(state: TranslationState) -> dict:
                 [s.get("order") for s in batch_segments],
                 [t.get("segment_id") for t in translations_raw],
             )
-            for seg, t in zip(batch_segments, translations_raw):
+            for seg, t in zip(batch_segments, translations_raw, strict=False):
                 trans_lookup[seg.get("order", 0)] = t.get("text", "")
 
         # Create TranslatedSegment entries
