@@ -6,16 +6,16 @@ Public API:
     build_translation_graph()   -- uncompiled graph for customisation
     TranslationState            -- pipeline state TypedDict
 """
+from fiction_translator.pipeline.callbacks import (
+    PIPELINE_STAGES,
+    ProgressCallback,
+    stage_progress,
+)
 from fiction_translator.pipeline.state import (
-    TranslationState,
+    BatchData,
     SegmentData,
     TranslatedSegment,
-    BatchData,
-)
-from fiction_translator.pipeline.callbacks import (
-    ProgressCallback,
-    PIPELINE_STAGES,
-    stage_progress,
+    TranslationState,
 )
 
 

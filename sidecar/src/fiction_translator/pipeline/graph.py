@@ -9,27 +9,26 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any
 
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, StateGraph
 from sqlalchemy.sql import func
 
-from fiction_translator.pipeline.state import TranslationState
 from fiction_translator.pipeline.callbacks import notify
 from fiction_translator.pipeline.edges import (
     should_re_segment,
     should_re_translate,
 )
-from fiction_translator.pipeline.nodes.segmenter import segmenter_node
 from fiction_translator.pipeline.nodes.character_extractor import (
     character_extractor_node,
 )
-from fiction_translator.pipeline.nodes.validator import validator_node
-from fiction_translator.pipeline.nodes.translator import translator_node
-from fiction_translator.pipeline.nodes.reviewer import reviewer_node
 from fiction_translator.pipeline.nodes.persona_learner import (
     persona_learner_node,
 )
+from fiction_translator.pipeline.nodes.reviewer import reviewer_node
+from fiction_translator.pipeline.nodes.segmenter import segmenter_node
+from fiction_translator.pipeline.nodes.translator import translator_node
+from fiction_translator.pipeline.nodes.validator import validator_node
+from fiction_translator.pipeline.state import TranslationState
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +36,189 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────
 # Inline nodes (load_context, finalize) -- thin DB integration layers
 # ─────────────────────────────────────────────────────────────────────
+
+
+def _build_connected_text(
+    translated_segments: list[dict],
+    segments: list[dict],
+) -> tuple[str, list[dict]]:
+    """Build connected translated prose and segment map from translated segments.
+
+    Returns (connected_text, segment_map).
+    """
+    sorted_segs = sorted(
+        translated_segments,
+        key=lambda s: s.get("segment_id", s.get("order", 0)),
+    )
+
+    parts: list[str] = []
+    offset = 0
+    segment_map: list[dict] = []
+
+    for i, seg in enumerate(sorted_segs):
+        text = seg.get("translated_text", "")
+
+        if i > 0:
+            seg_id = seg.get("segment_id", seg.get("order", 0))
+            has_break = False
+            for src_seg in segments:
+                if src_seg.get("order") == seg_id:
+                    has_break = src_seg.get("has_preceding_break", False)
+                    break
+            separator = "\n\n" if has_break else "\n"
+            offset += len(separator)
+            parts.append(separator)
+
+        start = offset
+        end = offset + len(text)
+
+        source_start = 0
+        source_end = 0
+        seg_id = seg.get("segment_id", seg.get("order", 0))
+        for src_seg in segments:
+            if src_seg.get("order") == seg_id:
+                source_start = src_seg.get("source_start_offset", 0)
+                source_end = src_seg.get("source_end_offset", 0)
+                break
+
+        segment_map.append({
+            "segment_id": seg_id,
+            "source_start": source_start,
+            "source_end": source_end,
+            "translated_start": start,
+            "translated_end": end,
+            "type": seg.get("type", "narrative"),
+            "speaker": seg.get("speaker"),
+            "batch_id": seg.get("batch_id"),
+        })
+
+        parts.append(text)
+        offset = end
+
+    connected = "".join(parts)
+    return connected, segment_map
+
+
+def _persist_segments_and_translations(
+    db, chapter_id: int, segments: list[dict], sorted_segs: list[dict],
+    segment_map: list[dict], target_language: str,
+):
+    """Save segments and their translations to the database."""
+    from fiction_translator.db.models import Segment, Translation, TranslationStatus
+
+    # Clear previous segments for this chapter
+    db.query(Translation).filter(
+        Translation.segment_id.in_(
+            db.query(Segment.id).filter(Segment.chapter_id == chapter_id)
+        )
+    ).delete(synchronize_session="fetch")
+    db.query(Segment).filter(Segment.chapter_id == chapter_id).delete(
+        synchronize_session="fetch"
+    )
+
+    for i, src_seg in enumerate(segments):
+        db_seg = Segment(
+            chapter_id=chapter_id,
+            order=src_seg.get("order", i),
+            source_text=src_seg.get("text", ""),
+            source_start_offset=src_seg.get("source_start_offset"),
+            source_end_offset=src_seg.get("source_end_offset"),
+            segment_type=src_seg.get("type", "narrative"),
+            speaker=src_seg.get("speaker"),
+            status=TranslationStatus.TRANSLATED,
+        )
+        db.add(db_seg)
+        db.flush()
+
+        seg_order = src_seg.get("order", i)
+        matching_trans = None
+        for ts in sorted_segs:
+            if ts.get("segment_id", ts.get("order")) == seg_order:
+                matching_trans = ts
+                break
+
+        if matching_trans:
+            trans_start = 0
+            trans_end = 0
+            for sm in segment_map:
+                if sm["segment_id"] == seg_order:
+                    trans_start = sm["translated_start"]
+                    trans_end = sm["translated_end"]
+                    break
+
+            db_trans = Translation(
+                segment_id=db_seg.id,
+                target_language=target_language,
+                translated_text=matching_trans.get("translated_text", ""),
+                translated_start_offset=trans_start,
+                translated_end_offset=trans_end,
+                status=TranslationStatus.TRANSLATED,
+                batch_id=None,
+            )
+            db.add(db_trans)
+
+
+def _persist_batches(db, chapter_id: int, target_language: str, state: dict) -> dict[int, int]:
+    """Save translation batches and return batch_order -> db_id mapping."""
+    from fiction_translator.db.models import TranslationBatch
+
+    batches = state.get("batches", [])
+    batch_order_to_id: dict[int, int] = {}
+    final_review_passed = state.get("review_passed", True)
+    final_review_feedback = state.get("review_feedback", [])
+    final_review_iteration = state.get("review_iteration", 0)
+
+    for batch_data in batches:
+        if final_review_passed:
+            stored_feedback = None
+        else:
+            stored_feedback = final_review_feedback or batch_data.get("review_feedback")
+
+        db_batch = TranslationBatch(
+            chapter_id=chapter_id,
+            target_language=target_language,
+            batch_order=batch_data.get("batch_order", 0),
+            situation_summary=batch_data.get("situation_summary"),
+            character_events=batch_data.get("character_events"),
+            full_cot_json={
+                "situation_summary": batch_data.get("situation_summary"),
+                "character_events": batch_data.get("character_events"),
+                "translations": batch_data.get("translations"),
+            },
+            segment_ids=batch_data.get("segment_ids"),
+            review_feedback=stored_feedback,
+            review_iteration=final_review_iteration,
+        )
+        db.add(db_batch)
+        db.flush()
+        batch_order_to_id[batch_data.get("batch_order", 0)] = db_batch.id
+
+    return batch_order_to_id
+
+
+def _link_translations_to_batches(db, chapter_id: int, batches: list[dict], batch_order_to_id: dict[int, int]):
+    """Link translation records to their batch records."""
+    from fiction_translator.db.models import Segment, Translation
+
+    if not batch_order_to_id:
+        return
+
+    seg_to_batch_db_id: dict[int, int] = {}
+    for batch_data in batches:
+        db_batch_id = batch_order_to_id.get(batch_data.get("batch_order", 0))
+        if db_batch_id:
+            for seg_id in (batch_data.get("segment_ids") or []):
+                seg_to_batch_db_id[seg_id] = db_batch_id
+
+    for trans in db.query(Translation).filter(
+        Translation.segment_id.in_(
+            db.query(Segment.id).filter(Segment.chapter_id == chapter_id)
+        )
+    ).all():
+        seg = db.query(Segment).filter(Segment.id == trans.segment_id).first()
+        if seg and seg.order in seg_to_batch_db_id:
+            trans.batch_id = seg_to_batch_db_id[seg.order]
+
 
 async def load_context_node(state: TranslationState) -> dict:
     """Load project glossary, personas, and settings from the database."""
@@ -85,68 +267,21 @@ async def finalize_node(state: TranslationState) -> dict:
     chapter_id = state["chapter_id"]
     target_language = state.get("target_language", "en")
 
-    # Sort by order
+    connected, segment_map = _build_connected_text(translated_segments, segments)
+
     sorted_segs = sorted(
         translated_segments,
         key=lambda s: s.get("segment_id", s.get("order", 0)),
     )
 
-    # Build connected text and segment map with translated offsets
-    parts: list[str] = []
-    offset = 0
-    segment_map: list[dict] = []
-
-    for i, seg in enumerate(sorted_segs):
-        text = seg.get("translated_text", "")
-
-        # Add separator before this segment (not before the first one)
-        if i > 0:
-            # Find matching source segment to check for paragraph break
-            seg_id = seg.get("segment_id", seg.get("order", 0))
-            has_break = False
-            for src_seg in segments:
-                if src_seg.get("order") == seg_id:
-                    has_break = src_seg.get("has_preceding_break", False)
-                    break
-            separator = "\n\n" if has_break else "\n"
-            offset += len(separator)
-            parts.append(separator)
-
-        start = offset
-        end = offset + len(text)
-
-        # Find matching source segment for offsets
-        source_start = 0
-        source_end = 0
-        seg_id = seg.get("segment_id", seg.get("order", 0))
-        for src_seg in segments:
-            if src_seg.get("order") == seg_id:
-                source_start = src_seg.get("source_start_offset", 0)
-                source_end = src_seg.get("source_end_offset", 0)
-                break
-
-        segment_map.append({
-            "segment_id": seg_id,
-            "source_start": source_start,
-            "source_end": source_end,
-            "translated_start": start,
-            "translated_end": end,
-            "type": seg.get("type", "narrative"),
-            "speaker": seg.get("speaker"),
-            "batch_id": seg.get("batch_id"),
-        })
-
-        parts.append(text)
-        offset = end
-
-    connected = "".join(parts)
-
     # ── Persist to database ──────────────────────────────────────────
-    from fiction_translator.db.session import get_db
     from fiction_translator.db.models import (
-        Chapter, Segment, Translation, TranslationBatch,
-        TranslationStatus, PersonaSuggestion, Persona, GlossaryEntry,
+        Chapter,
+        GlossaryEntry,
+        Persona,
+        PersonaSuggestion,
     )
+    from fiction_translator.db.session import get_db
 
     db = get_db()
     try:
@@ -158,113 +293,14 @@ async def finalize_node(state: TranslationState) -> dict:
         chapter.translated_content = connected
         chapter.translation_stale = False
 
-        # Clear previous segments for this chapter (full re-translation)
-        db.query(Translation).filter(
-            Translation.segment_id.in_(
-                db.query(Segment.id).filter(Segment.chapter_id == chapter_id)
-            )
-        ).delete(synchronize_session="fetch")
-        db.query(Segment).filter(Segment.chapter_id == chapter_id).delete(
-            synchronize_session="fetch"
+        _persist_segments_and_translations(
+            db, chapter_id, segments, sorted_segs, segment_map, target_language,
         )
 
-        # Save segments and translations
-        for i, src_seg in enumerate(segments):
-            db_seg = Segment(
-                chapter_id=chapter_id,
-                order=src_seg.get("order", i),
-                source_text=src_seg.get("text", ""),
-                source_start_offset=src_seg.get("source_start_offset"),
-                source_end_offset=src_seg.get("source_end_offset"),
-                segment_type=src_seg.get("type", "narrative"),
-                speaker=src_seg.get("speaker"),
-                status=TranslationStatus.TRANSLATED,
-            )
-            db.add(db_seg)
-            db.flush()  # Get the ID
-
-            # Find matching translation
-            seg_order = src_seg.get("order", i)
-            matching_trans = None
-            for ts in sorted_segs:
-                if ts.get("segment_id", ts.get("order")) == seg_order:
-                    matching_trans = ts
-                    break
-
-            if matching_trans:
-                # Find translated offsets from segment_map
-                trans_start = 0
-                trans_end = 0
-                for sm in segment_map:
-                    if sm["segment_id"] == seg_order:
-                        trans_start = sm["translated_start"]
-                        trans_end = sm["translated_end"]
-                        break
-
-                db_trans = Translation(
-                    segment_id=db_seg.id,
-                    target_language=target_language,
-                    translated_text=matching_trans.get("translated_text", ""),
-                    translated_start_offset=trans_start,
-                    translated_end_offset=trans_end,
-                    status=TranslationStatus.TRANSLATED,
-                    batch_id=None,  # Will link to batch if we save batches
-                )
-                db.add(db_trans)
-
-        # Save translation batches and build batch_order -> db_id mapping
-        batches = state.get("batches", [])
-        batch_order_to_id: dict[int, int] = {}
-        final_review_passed = state.get("review_passed", True)
-        final_review_feedback = state.get("review_feedback", [])
-        final_review_iteration = state.get("review_iteration", 0)
-        for batch_data in batches:
-            # Use final review feedback if the review passed (the batch-level
-            # feedback only records the *input* from the previous review that
-            # triggered re-translation, not the final verdict).
-            if final_review_passed:
-                stored_feedback = None
-            else:
-                stored_feedback = final_review_feedback or batch_data.get("review_feedback")
-
-            db_batch = TranslationBatch(
-                chapter_id=chapter_id,
-                target_language=target_language,
-                batch_order=batch_data.get("batch_order", 0),
-                situation_summary=batch_data.get("situation_summary"),
-                character_events=batch_data.get("character_events"),
-                full_cot_json={
-                    "situation_summary": batch_data.get("situation_summary"),
-                    "character_events": batch_data.get("character_events"),
-                    "translations": batch_data.get("translations"),
-                },
-                segment_ids=batch_data.get("segment_ids"),
-                review_feedback=stored_feedback,
-                review_iteration=final_review_iteration,
-            )
-            db.add(db_batch)
-            db.flush()
-            batch_order_to_id[batch_data.get("batch_order", 0)] = db_batch.id
-
-        # Link translations to their batch records
-        if batch_order_to_id:
-            # Build segment_order -> batch_db_id mapping from batch data
-            seg_to_batch_db_id: dict[int, int] = {}
-            for batch_data in batches:
-                db_batch_id = batch_order_to_id.get(batch_data.get("batch_order", 0))
-                if db_batch_id:
-                    for seg_id in (batch_data.get("segment_ids") or []):
-                        seg_to_batch_db_id[seg_id] = db_batch_id
-
-            # Update translations with correct batch_id
-            for trans in db.query(Translation).filter(
-                Translation.segment_id.in_(
-                    db.query(Segment.id).filter(Segment.chapter_id == chapter_id)
-                )
-            ).all():
-                seg = db.query(Segment).filter(Segment.id == trans.segment_id).first()
-                if seg and seg.order in seg_to_batch_db_id:
-                    trans.batch_id = seg_to_batch_db_id[seg.order]
+        batch_order_to_id = _persist_batches(db, chapter_id, target_language, state)
+        _link_translations_to_batches(
+            db, chapter_id, state.get("batches", []), batch_order_to_id,
+        )
 
         # Save persona suggestions
         persona_suggestions = state.get("persona_suggestions", [])
@@ -499,6 +535,7 @@ async def run_translation_pipeline(
     target_language: str = "en",
     api_keys: dict | None = None,
     progress_callback=None,
+    cancel_event=None,
     **kwargs,
 ) -> dict:
     """Run the full translation pipeline for a chapter.
@@ -557,6 +594,7 @@ async def run_translation_pipeline(
         "api_keys": api_keys or {},
         "pipeline_run_id": run.id,
         "progress_callback": progress_callback,
+        "cancel_event": cancel_event,
         "validation_attempts": 0,
         "review_iteration": 0,
         "total_tokens": 0,
@@ -566,6 +604,8 @@ async def run_translation_pipeline(
     initial_state.update(kwargs)  # type: ignore[arg-type]
 
     try:
+        from fiction_translator.pipeline.callbacks import PipelineCancelled
+
         graph = get_translation_graph()
         result = await graph.ainvoke(initial_state)
 
@@ -589,6 +629,17 @@ async def run_translation_pipeline(
             "segment_map": result.get("segment_map", []),
             "persona_suggestions": result.get("persona_suggestions", []),
             "stats": run.stats,
+        }
+
+    except PipelineCancelled:
+        logger.info("Pipeline cancelled for chapter %d", chapter_id)
+        run.status = PipelineStatus.CANCELLED
+        run.completed_at = datetime.utcnow()
+        db.commit()
+        return {
+            "success": False,
+            "cancelled": True,
+            "pipeline_run_id": run.id,
         }
 
     except Exception as e:

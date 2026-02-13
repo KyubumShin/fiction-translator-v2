@@ -6,10 +6,9 @@ producing suggestions that can be reviewed and applied to the persona DB.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
-from fiction_translator.pipeline.state import TranslationState
 from fiction_translator.pipeline.callbacks import notify
+from fiction_translator.pipeline.state import TranslationState
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +34,10 @@ async def persona_learner_node(state: TranslationState) -> dict:
         return {"persona_suggestions": []}
 
     try:
-        from fiction_translator.llm.providers import get_llm_provider
         from fiction_translator.llm.prompts.persona_analysis import (
             build_persona_analysis_prompt,
         )
+        from fiction_translator.llm.providers import get_llm_provider
 
         provider = get_llm_provider(
             state.get("llm_provider", "gemini"),

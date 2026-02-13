@@ -6,8 +6,9 @@ If validation fails, the pipeline can loop back to re-segment.
 from __future__ import annotations
 
 import logging
-from fiction_translator.pipeline.state import TranslationState
+
 from fiction_translator.pipeline.callbacks import notify
+from fiction_translator.pipeline.state import TranslationState
 
 logger = logging.getLogger(__name__)
 
