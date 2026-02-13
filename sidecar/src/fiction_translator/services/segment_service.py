@@ -2,14 +2,15 @@
 from __future__ import annotations
 
 import logging
+
 from sqlalchemy.orm import Session
 
-from fiction_translator.db.models import Segment, Translation, Project, TranslationStatus
+from fiction_translator.db.models import Segment, Translation, TranslationStatus
+from fiction_translator.llm.prompts.cot_translation import build_cot_translation_prompt
+from fiction_translator.llm.prompts.text_utils import normalize_quotes
+from fiction_translator.llm.providers import get_llm_provider
 from fiction_translator.services.glossary_service import get_glossary_map
 from fiction_translator.services.persona_service import get_personas_context
-from fiction_translator.llm.prompts.cot_translation import build_cot_translation_prompt
-from fiction_translator.llm.providers import get_llm_provider
-from fiction_translator.llm.prompts.text_utils import normalize_quotes
 
 logger = logging.getLogger(__name__)
 

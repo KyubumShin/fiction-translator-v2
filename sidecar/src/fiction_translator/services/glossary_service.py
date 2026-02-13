@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
+
 from fiction_translator.db.models import GlossaryEntry
+
+_GLOSSARY_UPDATABLE = {"source_term", "translated_term", "term_type", "notes", "context"}
 
 
 def list_glossary(db: Session, project_id: int) -> list[dict]:
@@ -44,7 +47,7 @@ def update_glossary_entry(db: Session, entry_id: int, **kwargs) -> dict:
     if not entry:
         raise ValueError(f"Glossary entry {entry_id} not found")
     for key, value in kwargs.items():
-        if hasattr(entry, key) and key != "id":
+        if key in _GLOSSARY_UPDATABLE:
             setattr(entry, key, value)
     db.commit()
     db.refresh(entry)

@@ -1,17 +1,26 @@
 """Project CRUD service."""
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
 from sqlalchemy import func
-from fiction_translator.db.models import Project, Chapter
+from sqlalchemy.orm import Session
+
+from fiction_translator.db.models import Chapter, Project
+
+_PROJECT_UPDATABLE = {"name", "description", "source_language", "target_language", "genre", "style_settings", "pipeline_type", "llm_provider"}
 
 
 def list_projects(db: Session) -> list[dict]:
     """List all projects with chapter counts."""
+    # Get chapter counts in one query
+    chapter_counts = dict(
+        db.query(Chapter.project_id, func.count(Chapter.id))
+        .group_by(Chapter.project_id)
+        .all()
+    )
+
     projects = db.query(Project).order_by(Project.updated_at.desc()).all()
     result = []
     for p in projects:
-        chapter_count = db.query(func.count(Chapter.id)).filter(Chapter.project_id == p.id).scalar()
         result.append({
             "id": p.id,
             "name": p.name,
@@ -23,7 +32,7 @@ def list_projects(db: Session) -> list[dict]:
             "llm_provider": p.llm_provider,
             "created_at": p.created_at.isoformat() if p.created_at else None,
             "updated_at": p.updated_at.isoformat() if p.updated_at else None,
-            "chapter_count": chapter_count,
+            "chapter_count": chapter_counts.get(p.id, 0),
         })
     return result
 
@@ -60,7 +69,7 @@ def update_project(db: Session, project_id: int, **kwargs) -> dict:
     if not project:
         raise ValueError(f"Project {project_id} not found")
     for key, value in kwargs.items():
-        if hasattr(project, key) and key != "id":
+        if key in _PROJECT_UPDATABLE:
             setattr(project, key, value)
     db.commit()
     db.refresh(project)

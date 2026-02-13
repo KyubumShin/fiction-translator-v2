@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
+
 from fiction_translator.db.models import Persona, PersonaSuggestion
+
+_PERSONA_UPDATABLE = {"name", "aliases", "personality", "speech_style", "formality_level", "age_group", "example_dialogues", "notes"}
 
 
 def list_personas(db: Session, project_id: int) -> list[dict]:
@@ -49,7 +52,7 @@ def update_persona(db: Session, persona_id: int, **kwargs) -> dict:
     if not persona:
         raise ValueError(f"Persona {persona_id} not found")
     for key, value in kwargs.items():
-        if hasattr(persona, key) and key != "id":
+        if key in _PERSONA_UPDATABLE:
             setattr(persona, key, value)
     db.commit()
     db.refresh(persona)

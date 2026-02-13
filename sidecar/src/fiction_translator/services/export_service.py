@@ -1,11 +1,12 @@
 """Export service for chapters and projects."""
 from __future__ import annotations
 
-import os
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 from sqlalchemy.orm import Session
-from fiction_translator.db.models import Chapter, Segment, Translation, Export, Project
+
+from fiction_translator.db.models import Chapter, Export, Segment, Translation
 
 
 def export_chapter_txt(db: Session, chapter_id: int, target_language: str = "en") -> dict:
@@ -18,12 +19,16 @@ def export_chapter_txt(db: Session, chapter_id: int, target_language: str = "en"
         Segment.chapter_id == chapter_id
     ).order_by(Segment.order).all()
 
+    segment_ids = [seg.id for seg in segments]
+    translations = db.query(Translation).filter(
+        Translation.segment_id.in_(segment_ids),
+        Translation.target_language == target_language,
+    ).all()
+    translation_map = {t.segment_id: t for t in translations}
+
     lines = [f"# {chapter.title}\n"]
     for seg in segments:
-        translation = db.query(Translation).filter(
-            Translation.segment_id == seg.id,
-            Translation.target_language == target_language,
-        ).first()
+        translation = translation_map.get(seg.id)
         text = translation.translated_text if translation and translation.translated_text else seg.source_text
         lines.append(text)
 
@@ -53,8 +58,8 @@ def export_chapter_docx(db: Session, chapter_id: int, target_language: str = "en
     """Export a chapter as DOCX."""
     try:
         from docx import Document
-    except ImportError:
-        raise RuntimeError("python-docx not installed. Install with: uv add python-docx")
+    except ImportError as err:
+        raise RuntimeError("python-docx not installed. Install with: uv add python-docx") from err
 
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
@@ -67,11 +72,15 @@ def export_chapter_docx(db: Session, chapter_id: int, target_language: str = "en
         Segment.chapter_id == chapter_id
     ).order_by(Segment.order).all()
 
+    segment_ids = [seg.id for seg in segments]
+    translations = db.query(Translation).filter(
+        Translation.segment_id.in_(segment_ids),
+        Translation.target_language == target_language,
+    ).all()
+    translation_map = {t.segment_id: t for t in translations}
+
     for seg in segments:
-        translation = db.query(Translation).filter(
-            Translation.segment_id == seg.id,
-            Translation.target_language == target_language,
-        ).first()
+        translation = translation_map.get(seg.id)
         text = translation.translated_text if translation and translation.translated_text else seg.source_text
 
         if seg.segment_type == "dialogue" and seg.speaker:

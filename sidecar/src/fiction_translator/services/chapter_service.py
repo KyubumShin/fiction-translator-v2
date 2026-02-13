@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import re
 
-from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import Session
+
 from fiction_translator.db.models import Chapter, Segment, Translation, TranslationStatus
+
+_CHAPTER_UPDATABLE = {"title", "order", "source_content", "file_path", "translated_content", "translation_stale"}
 
 
 def list_chapters(db: Session, project_id: int) -> list[dict]:
@@ -65,7 +68,7 @@ def update_chapter(db: Session, chapter_id: int, **kwargs) -> dict:
     if not chapter:
         raise ValueError(f"Chapter {chapter_id} not found")
     for key, value in kwargs.items():
-        if hasattr(chapter, key) and key != "id":
+        if key in _CHAPTER_UPDATABLE:
             setattr(chapter, key, value)
     db.commit()
     db.refresh(chapter)
@@ -105,13 +108,15 @@ def get_editor_data(db: Session, chapter_id: int, target_language: str = "en") -
 
     source_content = chapter.source_content or ""
 
-    # Build translation lookup (one query per segment, cached)
-    translation_map: dict[int, "Translation | None"] = {}
-    for seg in segments:
-        translation_map[seg.id] = db.query(Translation).filter(
-            Translation.segment_id == seg.id,
-            Translation.target_language == target_language,
-        ).first()
+    # Build translation lookup (single batch query)
+    segment_ids = [seg.id for seg in segments]
+    translations = db.query(Translation).filter(
+        Translation.segment_id.in_(segment_ids),
+        Translation.target_language == target_language,
+    ).all()
+    translation_map: dict[int, Translation | None] = {
+        t.segment_id: t for t in translations
+    }
 
     # Phase 1: Determine paragraph breaks between segments
     has_break_list: list[bool] = [False]  # first segment never has a preceding break
