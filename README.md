@@ -38,6 +38,7 @@ Business logic layer containing:
 ## Key Features
 
 - **One-Click Translation**: Start translation with real-time pipeline progress tracking
+- **Pipeline Cancellation**: Cancel running translations at any time with graceful checkpoint-based stopping
 - **Connected Prose View**: Continuous text display (not segment-by-segment) for natural reading
 - **Chain-of-Thought Translation**: Batch translation with visible reasoning process
 - **CoT Toggle**: Enable or disable Chain-of-Thought reasoning per translation for speed vs. quality control
@@ -72,6 +73,7 @@ Business logic layer containing:
 - Python 3.11+
 - LangGraph
 - SQLAlchemy 2.0
+- Alembic (migrations)
 - SQLite
 
 ### LLM Providers
@@ -161,13 +163,18 @@ fiction-translator-v2/
 │
 ├── sidecar/                           # Python Sidecar (LangGraph)
 │   ├── pyproject.toml                 # Python dependencies and project config
+│   ├── alembic.ini                    # Alembic migration configuration
 │   ├── uv.lock                        # uv lockfile for reproducible installs
+│   ├── alembic/
+│   │   ├── env.py                     # Migration environment config
+│   │   ├── script.py.mako             # Migration template
+│   │   └── versions/                  # Migration scripts
 │   └── src/fiction_translator/
 │       ├── main.py                    # Entry point: init DB + start JSON-RPC server
 │       ├── ipc/
 │       │   ├── protocol.py            # JSON-RPC message schemas and parser
 │       │   ├── server.py              # Async stdin/stdout JSON-RPC server
-│       │   └── handlers.py            # 25 method handlers routing to services
+│       │   └── handlers.py            # 30 method handlers routing to services
 │       ├── db/
 │       │   ├── models.py              # 10 SQLAlchemy 2.0 models
 │       │   └── session.py             # Engine, session factory, init_db()
@@ -182,6 +189,7 @@ fiction-translator-v2/
 │       │   ├── graph.py               # LangGraph StateGraph definition
 │       │   ├── edges.py               # Conditional routing (validation gate, review loop)
 │       │   ├── callbacks.py           # Progress notification emitter
+│       │   ├── constants.py           # Shared patterns (dialogue markers, speaker regex)
 │       │   └── nodes/
 │       │       ├── segmenter.py       # Text segmentation (rule-based + LLM)
 │       │       ├── character_extractor.py  # Speaker detection (regex + LLM)
@@ -199,9 +207,13 @@ fiction-translator-v2/
 │       │       ├── validation.py           # Validation prompt
 │       │       ├── review.py               # Review prompt
 │       │       └── persona_analysis.py     # Persona analysis prompt
-│   ├── tests/                             # Unit tests
+│   ├── tests/
 │   │   ├── test_text_utils.py             # Quote normalization tests
-│   │   └── test_paragraph_breaks.py       # Paragraph break tests
+│   │   ├── test_paragraph_breaks.py       # Paragraph break tests
+│   │   ├── test_services.py               # Service layer CRUD tests
+│   │   ├── test_callbacks.py              # Pipeline callback tests
+│   │   ├── test_providers.py              # LLM provider tests
+│   │   └── test_handlers.py               # IPC handler tests
 │       ├── DOCS_EN.md                 # English documentation
 │       └── DOCS_KR.md                 # Korean documentation
 │
@@ -256,6 +268,21 @@ fiction-translator-v2/
   npm run tauri build
   ```
 
+- **TypeScript Type Check**
+  ```bash
+  npx tsc --noEmit
+  ```
+
+- **Python Lint**
+  ```bash
+  cd sidecar && uv run ruff check src/
+  ```
+
+- **Python Tests** (149 tests)
+  ```bash
+  cd sidecar && uv run pytest
+  ```
+
 ## Database
 
 The application uses SQLite for data persistence.
@@ -274,7 +301,7 @@ The application uses SQLite for data persistence.
 - `pipeline_runs` - Translation pipeline execution logs
 - `exports` - Export history
 
-**Initialization:** Database is auto-created on first launch with all required tables and indexes.
+**Initialization:** Database is auto-created on first launch. Schema migrations are managed by Alembic, with automatic upgrade on startup and `create_all()` fallback for new installations.
 
 ## LangGraph Translation Pipeline
 
@@ -303,13 +330,15 @@ Finalize (save results to database)
 ```
 
 **Pipeline Features:**
-- Real-time progress notifications
-- Automatic retry with exponential backoff
+- Real-time progress notifications via JSON-RPC
+- User-initiated pipeline cancellation
+- LLM retry with exponential backoff (429/5xx/timeout)
 - Quality gates at segmentation and translation stages
 - Chain-of-Thought reasoning preservation
 - Character persona learning
 - Smart quote normalization before LLM processing
 - Segment ID fallback matching for robust LLM response handling
+- Paragraph break preservation through the full pipeline
 
 ## Supported Languages
 
@@ -347,4 +376,4 @@ Each architectural layer includes bilingual documentation:
 
 ## License
 
-MIT
+Apache-2.0
