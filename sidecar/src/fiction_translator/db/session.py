@@ -1,8 +1,11 @@
 """Database engine and session management."""
 import os
+import sys
 from pathlib import Path
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
+
 from .models import Base
 
 
@@ -47,7 +50,59 @@ def get_db() -> Session:
     return factory()
 
 
+def upgrade_db():
+    """Run pending Alembic migrations."""
+    try:
+        from alembic.config import Config
+
+        from alembic import command
+
+        # Get the alembic directory path (relative to this file's parent directory)
+        # This file is in src/fiction_translator/db/session.py
+        # alembic/ is at the sidecar root, which is 3 levels up from src/
+        sidecar_root = Path(__file__).parents[3]
+        alembic_dir = sidecar_root / "alembic"
+
+        if not alembic_dir.exists():
+            # Alembic not set up, fall back to create_all
+            return False
+
+        # Create alembic config
+        alembic_cfg = Config()
+        alembic_cfg.set_main_option("script_location", str(alembic_dir))
+
+        # Get database URL
+        db_path = os.environ.get("FT_DATABASE_PATH", get_db_path())
+        alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+
+        # Suppress alembic output to stderr unless in verbose mode
+        if not os.environ.get("FT_VERBOSE"):
+            # Redirect alembic logging
+            alembic_cfg.set_main_option("sqlalchemy.echo", "false")
+
+        # Run migrations
+        command.upgrade(alembic_cfg, "head")
+        return True
+    except ImportError:
+        # Alembic not installed, fall back to create_all
+        return False
+    except Exception as e:
+        # Migration failed, log and fall back
+        print(f"Warning: Migration failed: {e}", file=sys.stderr)
+        return False
+
+
 def init_db():
-    """Create all tables."""
+    """Initialize database schema.
+
+    Tries to run Alembic migrations first. If that fails or Alembic
+    is not available, falls back to create_all().
+    """
     engine = get_engine()
+
+    # Try migrations first
+    if upgrade_db():
+        return
+
+    # Fallback to create_all if migrations didn't run
     Base.metadata.create_all(bind=engine)
