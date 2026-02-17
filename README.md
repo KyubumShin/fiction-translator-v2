@@ -23,6 +23,7 @@ Modern SaaS-style UI featuring:
 - Real-time pipeline progress monitoring
 - Inline translation editing
 - Glossary and persona management
+- Character relationship graph visualization (ReactFlow)
 - Dark/light theme support
 - Command palette (Cmd+K)
 
@@ -46,12 +47,16 @@ Business logic layer containing:
 - **Multi-LLM Support**: Google Gemini, Anthropic Claude, OpenAI GPT
 - **Glossary Management**: Consistent terminology across translations
 - **Character Personas**: Auto-detected character tracking with persona insights
+- **Character Relationship Graph**: Interactive ReactFlow visualization of character relationships with create/edit/delete
+- **Relationship Auto-Detection**: LLM-powered automatic relationship detection between characters
+- **Project List Management**: Delete projects directly from the dashboard with hover-visible trash icon
 - **Side-by-Side Editor**: Click-to-highlight segment mapping between source and translation
 - **Source Text Preview**: View source text in a two-column layout before running translation
 - **Paragraph Break Preservation**: Maintains original paragraph and line break structure through the pipeline
 - **Smart Quote Normalization**: Automatically converts smart quotes to straight quotes before LLM processing
 - **Inline Editing**: Direct translation editing with real-time updates
 - **Export Support**: TXT and DOCX export formats
+- **Debug Logging**: Verbose LLM output logging via `FT_LOG_LEVEL=DEBUG` environment variable
 - **Command Palette**: Keyboard-driven navigation (Cmd+K)
 
 ## Tech Stack
@@ -68,6 +73,7 @@ Business logic layer containing:
 - TanStack React Query (server state)
 - React Router v6
 - Lucide React (icons)
+- ReactFlow (@xyflow/react) for relationship graphs
 
 ### Backend
 - Python 3.11+
@@ -118,6 +124,7 @@ fiction-translator-v2/
 │   │   ├── useChapter.ts             # Chapter CRUD + editor data
 │   │   ├── useGlossary.ts            # Glossary CRUD
 │   │   ├── usePersonas.ts            # Persona CRUD
+│   │   ├── useRelationships.ts      # Character relationship CRUD
 │   │   ├── useTranslation.ts         # Translation pipeline trigger
 │   │   ├── useProgress.ts            # Real-time progress via Tauri events
 │   │   └── useTheme.ts               # Dark/light theme management
@@ -148,7 +155,10 @@ fiction-translator-v2/
 │   │   ├── knowledge/
 │   │   │   ├── GlossaryPanel.tsx      # Glossary management UI
 │   │   │   ├── PersonaPanel.tsx       # Character persona management
-│   │   │   └── PersonaSummaryCard.tsx # Persona summary display
+│   │   │   ├── PersonaSummaryCard.tsx # Persona summary display
+│   │   │   ├── RelationshipGraph.tsx    # Interactive relationship visualization
+│   │   │   ├── RelationshipEdge.tsx     # Custom labeled edge component
+│   │   │   └── RelationshipEdgeDialog.tsx # Relationship create/edit dialog
 │   │   └── ui/
 │   │       ├── Button.tsx             # Reusable button component
 │   │       ├── Input.tsx              # Reusable input component
@@ -213,7 +223,8 @@ fiction-translator-v2/
 │   │   ├── test_services.py               # Service layer CRUD tests
 │   │   ├── test_callbacks.py              # Pipeline callback tests
 │   │   ├── test_providers.py              # LLM provider tests
-│   │   └── test_handlers.py               # IPC handler tests
+│   │   ├── test_handlers.py               # IPC handler tests
+│   │   └── test_glossary_extract.py     # Glossary extraction pipeline tests
 │       ├── DOCS_EN.md                 # English documentation
 │       └── DOCS_KR.md                 # Korean documentation
 │
@@ -278,9 +289,14 @@ fiction-translator-v2/
   cd sidecar && uv run ruff check src/
   ```
 
-- **Python Tests** (149 tests)
+- **Python Tests**
   ```bash
   cd sidecar && uv run pytest
+  ```
+
+- **Frontend Tests**
+  ```bash
+  npm test
   ```
 
 ## Database
@@ -289,7 +305,7 @@ The application uses SQLite for data persistence.
 
 **Location:** `~/.fiction-translator/data.db`
 
-**Schema:** 10 tables
+**Schema:** 11 tables
 - `projects` - Translation projects
 - `chapters` - Chapter content and metadata
 - `segments` - Text segments with boundaries
@@ -298,6 +314,7 @@ The application uses SQLite for data persistence.
 - `glossary_entries` - Terminology glossary
 - `personas` - Character personas and traits
 - `persona_suggestions` - Auto-detected persona suggestions
+- `character_relationships` - Character relationship data
 - `pipeline_runs` - Translation pipeline execution logs
 - `exports` - Export history
 
@@ -326,6 +343,8 @@ Reviewer (translation quality assessment)
     ↓
 Persona Learner (character insight extraction)
     ↓
+Relationship Learner (character relationship detection)
+    ↓
 Finalize (save results to database)
 ```
 
@@ -336,6 +355,8 @@ Finalize (save results to database)
 - Quality gates at segmentation and translation stages
 - Chain-of-Thought reasoning preservation
 - Character persona learning
+- Glossary auto-extraction from unknown terms in CoT responses
+- Character relationship auto-detection
 - Smart quote normalization before LLM processing
 - Segment ID fallback matching for robust LLM response handling
 - Paragraph break preservation through the full pipeline

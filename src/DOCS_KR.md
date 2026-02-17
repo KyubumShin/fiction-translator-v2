@@ -62,6 +62,7 @@ src/
 │   ├── useChapter.ts           # 챕터 CRUD + 편집기 데이터
 │   ├── useGlossary.ts          # 용어집 CRUD
 │   ├── usePersonas.ts          # 페르소나 CRUD
+│   ├── useRelationships.ts     # 캐릭터 관계 CRUD
 │   ├── useTranslation.ts       # 번역 트리거 뮤테이션
 │   ├── useProgress.ts          # 파이프라인 이벤트 리스너
 │   ├── useToast.ts             # 토스트 알림 상태 관리
@@ -93,7 +94,10 @@ src/
 │   ├── knowledge/              # 용어집 패널, 페르소나 패널
 │   │   ├── GlossaryPanel.tsx            # 용어 관리 UI
 │   │   ├── PersonaPanel.tsx             # 캐릭터 관리 UI
-│   │   └── PersonaSummaryCard.tsx       # 페르소나 카드 그리드 표시
+│   │   ├── PersonaSummaryCard.tsx       # 페르소나 카드 그리드 표시
+│   │   ├── RelationshipGraph.tsx        # 캐릭터 관계 그래프 (ReactFlow)
+│   │   ├── RelationshipEdge.tsx         # 라벨이 있는 커스텀 엣지
+│   │   └── RelationshipEdgeDialog.tsx   # 엣지 생성/편집 대화상자
 │   └── ui/                     # 공유 프리미티브 (Button, Input, Textarea, Select, Label, Dialog, Toast, ConfirmDialog)
 │       ├── Button.tsx
 │       ├── Input.tsx
@@ -182,6 +186,13 @@ const unlisten = await onPipelineProgress((p) => {
 - `updatePersona(personaId: number, data)` → `Persona`
 - `deletePersona(personaId: number)` → `void`
 
+**관계:**
+- `listRelationships(projectId: number)` → `CharacterRelationship[]`
+- `createRelationship(data)` → `CharacterRelationship`
+- `updateRelationship(relationshipId: number, data)` → `CharacterRelationship`
+- `deleteRelationship(relationshipId: number)` → `void`
+- `detectRelationships(projectId: number)` → `CharacterRelationship[]`
+
 **파이프라인:**
 - `translateChapter(chapterId: number, targetLanguage: string)` → 번역 트리거
 - `cancelPipeline()` → 활성 파이프라인 취소
@@ -268,6 +279,20 @@ interface Persona {
   age_group: string | null;
   appearance_count: number;
   auto_detected: boolean;
+}
+
+interface CharacterRelationship {
+  id: number;
+  project_id: number;
+  persona_id_1: number;
+  persona_id_2: number;
+  relationship_type: string;
+  description: string | null;
+  intimacy_level: number;
+  auto_detected: boolean;
+  detection_confidence: number | null;
+  created_at: string;
+  updated_at: string;
 }
 ```
 
@@ -511,6 +536,29 @@ useDeletePersona() → { mutate, mutateAsync, isPending }
 
 ---
 
+### `useRelationships.ts`
+
+**쿼리:**
+
+```typescript
+useRelationships(projectId: number | null) → { data: CharacterRelationship[], isLoading, error }
+```
+
+**뮤테이션:**
+
+```typescript
+useCreateRelationship() → { mutateAsync, isPending }
+  // mutateAsync({ project_id, persona_id_1, persona_id_2, relationship_type, description?, intimacy_level? })
+
+useUpdateRelationship() → { mutateAsync, isPending }
+  // mutateAsync({ id, ...data })
+
+useDeleteRelationship() → { mutateAsync, isPending }
+  // mutateAsync(id)
+```
+
+---
+
 ### `useTranslation.ts`
 
 **뮤테이션:**
@@ -629,12 +677,13 @@ showToast("연결 실패", "error");
 **상태:**
 - `useProjects()` — 모든 프로젝트 가져오기
 - `useCreateProject()` — 생성 뮤테이션
+- `useDeleteProject()` — 확인 대화상자가 있는 삭제 뮤테이션
 - 로컬 상태: 대화상자 열림, 폼 데이터
 
 **레이아웃:**
 - "새 프로젝트" 버튼이 있는 헤더
 - 프로젝트가 없으면 빈 상태
-- `ProjectCard` 컴포넌트 그리드
+- 호버 시 보이는 삭제 버튼이 있는 `ProjectCard` 컴포넌트 그리드
 - 이름, 설명, 원본/대상 언어, 장르가 있는 생성 대화상자
 
 **네비게이션:**
@@ -1420,6 +1469,41 @@ npm run typecheck
 
 ---
 
+## 테스트
+
+### 프론트엔드 테스트
+
+프론트엔드는 컴포넌트 테스트에 **Vitest**와 **React Testing Library**를 사용합니다.
+
+**설정:**
+- 테스트 러너: Vitest (`vite.config.ts`에서 설정)
+- DOM 환경: jsdom
+- 어설션: `@testing-library/jest-dom`
+- 사용자 상호작용: `@testing-library/user-event`
+- 셋업 파일: `src/test/setup.ts`
+
+**테스트 실행:**
+
+```bash
+npm test          # 모든 프론트엔드 테스트 실행
+npm run test:ui   # Vitest UI로 실행
+```
+
+**테스트 파일:**
+- `src/components/project/ProjectCard.test.tsx` — 프로젝트 카드 렌더링, 클릭 핸들러, 삭제 버튼
+- `src/components/knowledge/PersonaPanel.test.tsx` — 페르소나 목록, 로딩/빈 상태, 그래프 토글
+- `src/components/knowledge/RelationshipGraph.test.tsx` — 빈 상태, 관계 필터링
+
+### 백엔드 테스트
+
+Python 사이드카는 단위 테스트에 **pytest**를 사용합니다.
+
+```bash
+cd sidecar && uv run pytest
+```
+
+---
+
 ## 향후 개선사항
 
 ### 아직 구현되지 않음
@@ -1437,6 +1521,14 @@ npm run typecheck
 5. **토스트 알림:** 브라우저 `alert()`를 인앱 토스트 시스템으로 대체 (useToast 훅 + Toast 컴포넌트)
 6. **ConfirmDialog:** 브라우저 `confirm()`을 비동기 인식 대화상자 컴포넌트로 대체
 7. **모든 페이지/패널 컴포넌트:** ProjectCard, ChapterList, GlossaryPanel, PersonaPanel, PersonaSummaryCard 모두 구현됨
+8. **프로젝트 목록 삭제:** 확인 대화상자가 있는 각 프로젝트 카드의 삭제 버튼 (호버 시 보이는 휴지통 아이콘)
+9. **캐릭터 관계 그래프:** 엣지 라벨, 생성/편집/삭제를 지원하는 ReactFlow 기반 인터랙티브 그래프
+10. **관계 자동 감지:** 페르소나 간 LLM 기반 관계 감지 파이프라인 노드
+11. **그래프 아이콘 토글:** 페르소나 탭에서 목록과 그래프 뷰 전환을 위한 아이콘 전용 토글 버튼
+12. **연결된 캐릭터만 표시:** 관계 그래프에서 하나 이상의 관계가 있는 캐릭터만 표시
+13. **용어집 자동 추출 수정:** 리뷰 루프 반복에서 미지 용어가 유지되도록 수정
+14. **LLM 디버그 로깅:** 디버그 모드 (`FT_LOG_LEVEL=DEBUG`)에서 원시 LLM 응답 및 파싱된 JSON 요약 표시
+15. **프론트엔드 테스트 스위트:** Vitest + React Testing Library를 사용한 18개 컴포넌트 테스트 (ProjectCard, PersonaPanel, RelationshipGraph)
 
 ### 권장 다음 단계
 

@@ -62,6 +62,7 @@ src/
 │   ├── useChapter.ts           # Chapter CRUD + editor data
 │   ├── useGlossary.ts          # Glossary CRUD
 │   ├── usePersonas.ts          # Persona CRUD
+│   ├── useRelationships.ts     # Character relationship CRUD
 │   ├── useTranslation.ts       # Translation trigger mutation
 │   ├── useProgress.ts          # Pipeline event listener
 │   ├── useToast.ts             # Toast notification state management
@@ -93,7 +94,10 @@ src/
 │   ├── knowledge/              # Glossary panel, persona panel
 │   │   ├── GlossaryPanel.tsx            # Term management UI
 │   │   ├── PersonaPanel.tsx             # Character management UI
-│   │   └── PersonaSummaryCard.tsx       # Persona card for grid display
+│   │   ├── PersonaSummaryCard.tsx       # Persona card for grid display
+│   │   ├── RelationshipGraph.tsx        # Character relationship graph (ReactFlow)
+│   │   ├── RelationshipEdge.tsx         # Custom edge with labels
+│   │   └── RelationshipEdgeDialog.tsx   # Edge create/edit dialog
 │   └── ui/                     # Shared primitives (Button, Input, Textarea, Select, Label, Dialog, Toast, ConfirmDialog)
 │       ├── Button.tsx
 │       ├── Input.tsx
@@ -182,6 +186,13 @@ Convenience methods wrapping `rpc()`:
 - `updatePersona(personaId: number, data)` → `Persona`
 - `deletePersona(personaId: number)` → `void`
 
+**Relationships:**
+- `listRelationships(projectId: number)` → `CharacterRelationship[]`
+- `createRelationship(data)` → `CharacterRelationship`
+- `updateRelationship(relationshipId: number, data)` → `CharacterRelationship`
+- `deleteRelationship(relationshipId: number)` → `void`
+- `detectRelationships(projectId: number)` → `CharacterRelationship[]`
+
 **Pipeline:**
 - `translateChapter(chapterId: number, targetLanguage: string)` → Triggers translation
 - `cancelPipeline()` → Cancels active pipeline
@@ -268,6 +279,20 @@ interface Persona {
   age_group: string | null;
   appearance_count: number;
   auto_detected: boolean;
+}
+
+interface CharacterRelationship {
+  id: number;
+  project_id: number;
+  persona_id_1: number;
+  persona_id_2: number;
+  relationship_type: string;
+  description: string | null;
+  intimacy_level: number;
+  auto_detected: boolean;
+  detection_confidence: number | null;
+  created_at: string;
+  updated_at: string;
 }
 ```
 
@@ -511,6 +536,29 @@ useDeletePersona() → { mutate, mutateAsync, isPending }
 
 ---
 
+### `useRelationships.ts`
+
+**Queries:**
+
+```typescript
+useRelationships(projectId: number | null) → { data: CharacterRelationship[], isLoading, error }
+```
+
+**Mutations:**
+
+```typescript
+useCreateRelationship() → { mutateAsync, isPending }
+  // mutateAsync({ project_id, persona_id_1, persona_id_2, relationship_type, description?, intimacy_level? })
+
+useUpdateRelationship() → { mutateAsync, isPending }
+  // mutateAsync({ id, ...data })
+
+useDeleteRelationship() → { mutateAsync, isPending }
+  // mutateAsync(id)
+```
+
+---
+
 ### `useTranslation.ts`
 
 **Mutation:**
@@ -629,12 +677,13 @@ showToast("Connection failed", "error");
 **State:**
 - `useProjects()` — Fetch all projects
 - `useCreateProject()` — Create mutation
+- `useDeleteProject()` — Delete mutation with confirmation dialog
 - Local state: dialog open, form data
 
 **Layout:**
 - Header with "New Project" button
 - Empty state if no projects
-- Grid of `ProjectCard` components
+- Grid of `ProjectCard` components with hover-visible delete buttons
 - Create dialog with name, description, source/target language, genre
 
 **Navigation:**
@@ -1420,6 +1469,41 @@ Runs TypeScript compiler in check mode.
 
 ---
 
+## Testing
+
+### Frontend Tests
+
+The frontend uses **Vitest** with **React Testing Library** for component testing.
+
+**Setup:**
+- Test runner: Vitest (configured in `vite.config.ts`)
+- DOM environment: jsdom
+- Assertions: `@testing-library/jest-dom`
+- User interactions: `@testing-library/user-event`
+- Setup file: `src/test/setup.ts`
+
+**Running Tests:**
+
+```bash
+npm test          # Run all frontend tests
+npm run test:ui   # Run with Vitest UI
+```
+
+**Test Files:**
+- `src/components/project/ProjectCard.test.tsx` — Project card rendering, click handlers, delete button
+- `src/components/knowledge/PersonaPanel.test.tsx` — Persona list, loading/empty states, graph toggle
+- `src/components/knowledge/RelationshipGraph.test.tsx` — Empty states, relationship filtering
+
+### Backend Tests
+
+The Python sidecar uses **pytest** for unit testing.
+
+```bash
+cd sidecar && uv run pytest
+```
+
+---
+
 ## Future Enhancements
 
 ### Not Yet Implemented
@@ -1437,6 +1521,14 @@ Runs TypeScript compiler in check mode.
 5. **Toast notifications:** Replaced browser `alert()` with in-app toast system (useToast hook + Toast component)
 6. **ConfirmDialog:** Replaced browser `confirm()` with async-aware dialog component
 7. **All page/panel components:** ProjectCard, ChapterList, GlossaryPanel, PersonaPanel, PersonaSummaryCard all implemented
+8. **Project list delete:** Delete button on each project card (hover-visible trash icon) with confirmation dialog
+9. **Character relationship graph:** Interactive ReactFlow-based graph showing character relationships with edge labels, create/edit/delete support
+10. **Relationship auto-detection:** Pipeline node for LLM-powered relationship detection between personas
+11. **Graph icon toggle:** Icon-only toggle button in persona tab to switch between list and graph views
+12. **Connected-only filtering:** Relationship graph only shows characters that have at least one relationship
+13. **Glossary auto-extraction fix:** Unknown terms now preserved across review loop iterations
+14. **LLM debug logging:** Debug mode (`FT_LOG_LEVEL=DEBUG`) shows raw LLM responses and parsed JSON summaries
+15. **Frontend test suite:** Vitest + React Testing Library with 18 component tests (ProjectCard, PersonaPanel, RelationshipGraph)
 
 ### Recommended Next Steps
 
