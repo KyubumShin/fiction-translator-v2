@@ -24,6 +24,9 @@ from fiction_translator.pipeline.nodes.character_extractor import (
 from fiction_translator.pipeline.nodes.persona_learner import (
     persona_learner_node,
 )
+from fiction_translator.pipeline.nodes.relationship_learner import (
+    relationship_learner_node,
+)
 from fiction_translator.pipeline.nodes.reviewer import reviewer_node
 from fiction_translator.pipeline.nodes.segmenter import segmenter_node
 from fiction_translator.pipeline.nodes.translator import translator_node
@@ -231,6 +234,10 @@ async def load_context_node(state: TranslationState) -> dict:
         get_personas_context,
         list_personas,
     )
+    from fiction_translator.services.relationship_service import (
+        get_relationships_context,
+        list_relationships,
+    )
 
     db = get_db()
     try:
@@ -238,16 +245,21 @@ async def load_context_node(state: TranslationState) -> dict:
         glossary = get_glossary_map(db, project_id)
         personas_ctx = get_personas_context(db, project_id)
         existing = list_personas(db, project_id)
+        relationships = list_relationships(db, project_id)
+        relationships_ctx = get_relationships_context(db, project_id)
 
         await notify(
             callback, "load_context", 1.0,
-            f"Loaded {len(glossary)} glossary terms, {len(existing)} personas",
+            f"Loaded {len(glossary)} glossary terms, {len(existing)} personas, "
+            f"{len(relationships)} relationships",
         )
 
         return {
             "glossary": glossary,
             "personas_context": personas_ctx,
             "existing_personas": existing,
+            "existing_relationships": relationships,
+            "relationships_context": relationships_ctx,
         }
     finally:
         db.close()
@@ -440,6 +452,44 @@ async def finalize_node(state: TranslationState) -> dict:
                     ))
                     existing_terms.add(source.lower())
 
+        # Save relationship suggestions
+        relationship_suggestions = state.get("relationship_suggestions", [])
+        if relationship_suggestions:
+            from fiction_translator.services.relationship_service import (
+                create_relationship,
+                list_relationships,
+            )
+            existing_rels = list_relationships(db, chapter.project_id)
+            existing_pairs = {
+                (r["persona_id_1"], r["persona_id_2"]) for r in existing_rels
+            }
+
+            for suggestion in relationship_suggestions:
+                pid1 = suggestion.get("persona_id_1")
+                pid2 = suggestion.get("persona_id_2")
+                if pid1 is None or pid2 is None:
+                    continue
+                # Normalize pair
+                if pid1 > pid2:
+                    pid1, pid2 = pid2, pid1
+                if (pid1, pid2) in existing_pairs:
+                    continue
+                try:
+                    create_relationship(
+                        db,
+                        project_id=chapter.project_id,
+                        persona_id_1=pid1,
+                        persona_id_2=pid2,
+                        relationship_type=suggestion.get("relationship_type", "acquaintance"),
+                        description=suggestion.get("description"),
+                        intimacy_level=suggestion.get("intimacy_level", 5),
+                        auto_detected=True,
+                        detection_confidence=suggestion.get("confidence"),
+                    )
+                    existing_pairs.add((pid1, pid2))
+                except Exception:
+                    pass  # Skip duplicates or invalid pairs
+
         db.commit()
 
         await notify(callback, "finalize", 1.0, "Translation saved to database")
@@ -468,7 +518,7 @@ def build_translation_graph() -> StateGraph:
         translate -> review
             review --[pass]--> learn_personas
             review --[fail, iteration < 2]--> translate
-        learn_personas -> finalize -> END
+        learn_personas -> learn_relationships -> finalize -> END
     """
     graph = StateGraph(TranslationState)
 
@@ -480,6 +530,7 @@ def build_translation_graph() -> StateGraph:
     graph.add_node("translate", translator_node)
     graph.add_node("review", reviewer_node)
     graph.add_node("learn_personas", persona_learner_node)
+    graph.add_node("learn_relationships", relationship_learner_node)
     graph.add_node("finalize", finalize_node)
 
     # Linear edges
@@ -503,8 +554,9 @@ def build_translation_graph() -> StateGraph:
         "learn": "learn_personas",
     })
 
-    # Linear: learn -> finalize -> END
-    graph.add_edge("learn_personas", "finalize")
+    # Linear: learn -> learn_relationships -> finalize -> END
+    graph.add_edge("learn_personas", "learn_relationships")
+    graph.add_edge("learn_relationships", "finalize")
     graph.add_edge("finalize", END)
 
     return graph

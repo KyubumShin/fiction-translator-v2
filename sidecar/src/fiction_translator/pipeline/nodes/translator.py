@@ -95,6 +95,10 @@ async def translator_node(state: TranslationState) -> dict:
     glossary = state.get("glossary", {})
     glossary_pattern = build_glossary_pattern(glossary)
     personas_context = state.get("personas_context", "")
+    relationships_context = state.get("relationships_context", "")
+    # Combine personas and relationships context for the translator
+    if relationships_context:
+        personas_context = personas_context + "\n\n" + relationships_context if personas_context else relationships_context
     style_context = state.get("style_context", "")
     source_language = state.get("source_language", "ko")
     target_language = state.get("target_language", "en")

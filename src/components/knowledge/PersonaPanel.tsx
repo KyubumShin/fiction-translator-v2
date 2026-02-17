@@ -9,6 +9,7 @@ import { usePersonas, useCreatePersona, useUpdatePersona, useDeletePersona } fro
 import { PersonaSummaryCard } from "./PersonaSummaryCard";
 import type { Persona } from "@/api/types";
 import { languageName } from "@/lib/formatters";
+import { RelationshipGraph } from "./RelationshipGraph";
 
 interface PersonaPanelProps {
   projectId: number;
@@ -24,6 +25,7 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
   const [deletingPersonaId, setDeletingPersonaId] = useState<number | null>(null);
+  const [view, setView] = useState<"list" | "graph">("list");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -105,30 +107,56 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border flex items-center justify-between">
         <h2 className="text-lg font-semibold">Character Personas</h2>
-        <Button variant="primary" size="sm" onClick={handleAdd}>
-          + Add Persona
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            <Button
+              variant={view === "list" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setView("list")}
+            >
+              List
+            </Button>
+            <Button
+              variant={view === "graph" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setView("graph")}
+            >
+              Graph
+            </Button>
+          </div>
+          <Button variant="primary" size="sm" onClick={handleAdd}>
+            + Add Persona
+          </Button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
-        {!personas || personas.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p>No personas yet.</p>
-            <p className="text-sm mt-1">Add character personas to improve translation consistency.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {personas.map((persona) => (
-              <PersonaSummaryCard
-                key={persona.id}
-                persona={persona}
-                onEdit={() => handleEdit(persona)}
-                onDelete={() => handleDeleteRequest(persona.id)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {view === "list" ? (
+        <div className="flex-1 overflow-auto p-4">
+          {!personas || personas.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>No personas yet.</p>
+              <p className="text-sm mt-1">Add character personas to improve translation consistency.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {personas.map((persona) => (
+                <PersonaSummaryCard
+                  key={persona.id}
+                  persona={persona}
+                  onEdit={() => handleEdit(persona)}
+                  onDelete={() => handleDeleteRequest(persona.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <RelationshipGraph
+          projectId={projectId}
+          personas={personas ?? []}
+          onEditPersona={handleEdit}
+        />
+      )}
 
       <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
         <DialogHeader>

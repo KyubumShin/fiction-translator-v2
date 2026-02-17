@@ -2,6 +2,7 @@
 from .models import (
     Base,
     Chapter,
+    CharacterRelationship,
     Export,
     GlossaryEntry,
     Persona,
@@ -27,6 +28,7 @@ __all__ = [
     "TranslationBatch",
     "GlossaryEntry",
     "Persona",
+    "CharacterRelationship",
     "PersonaSuggestion",
     "PipelineRun",
     "Export",

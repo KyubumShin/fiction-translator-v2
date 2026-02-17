@@ -75,6 +75,9 @@ class Project(Base):
     exports: Mapped[list["Export"]] = relationship(
         "Export", back_populates="project", cascade="all, delete-orphan"
     )
+    character_relationships: Mapped[list["CharacterRelationship"]] = relationship(
+        "CharacterRelationship", back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class Chapter(Base):
@@ -266,6 +269,43 @@ class Persona(Base):
     )
     last_seen_chapter: Mapped[Optional["Chapter"]] = relationship(
         "Chapter", foreign_keys=[last_seen_chapter_id], back_populates="personas_last_seen"
+    )
+
+
+class CharacterRelationship(Base):
+    """Relationship between two character personas."""
+    __tablename__ = "character_relationships"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    project_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    persona_id_1: Mapped[int] = mapped_column(
+        Integer, ForeignKey("personas.id", ondelete="CASCADE"), nullable=False
+    )
+    persona_id_2: Mapped[int] = mapped_column(
+        Integer, ForeignKey("personas.id", ondelete="CASCADE"), nullable=False
+    )
+    relationship_type: Mapped[str] = mapped_column(String(50), default="acquaintance")
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    intimacy_level: Mapped[int] = mapped_column(Integer, default=5)  # 1-10
+    auto_detected: Mapped[bool] = mapped_column(Boolean, default=False)
+    detection_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    project: Mapped["Project"] = relationship(
+        "Project", back_populates="character_relationships"
+    )
+    persona_1: Mapped["Persona"] = relationship("Persona", foreign_keys=[persona_id_1])
+    persona_2: Mapped["Persona"] = relationship("Persona", foreign_keys=[persona_id_2])
+
+    __table_args__ = (
+        UniqueConstraint("persona_id_1", "persona_id_2", name="uq_relationship_pair"),
+        Index("ix_relationships_project", "project_id"),
     )
 
 

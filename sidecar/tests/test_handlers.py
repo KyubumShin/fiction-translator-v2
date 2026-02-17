@@ -144,12 +144,13 @@ class TestGetAllHandlers:
         # chapter: 6
         # glossary: 4
         # persona: 4
+        # relationship: 4
         # pipeline: 2
         # segment: 2
         # batch: 1
         # export: 2
-        # Total: 30
-        assert len(handlers) == 30
+        # Total: 34
+        assert len(handlers) == 34
 
 
 @pytest.mark.asyncio

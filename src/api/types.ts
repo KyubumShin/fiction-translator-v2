@@ -97,6 +97,20 @@ export interface Persona {
   auto_detected: boolean;
 }
 
+export interface CharacterRelationship {
+  id: number;
+  project_id: number;
+  persona_id_1: number;
+  persona_id_2: number;
+  relationship_type: string;
+  description: string | null;
+  intimacy_level: number;
+  auto_detected: boolean;
+  detection_confidence: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PersonaSuggestion {
   id: number;
   persona_id: number;

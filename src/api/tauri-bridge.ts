@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { PipelineProgress } from "./types";
+import type { PipelineProgress, CharacterRelationship } from "./types";
 
 /**
  * Call a JSON-RPC method on the Python sidecar via Tauri.
@@ -80,6 +80,22 @@ export const api = {
   updatePersona: (personaId: number, data: Record<string, unknown>) =>
     rpc("persona.update", { persona_id: personaId, ...data }),
   deletePersona: (personaId: number) => rpc("persona.delete", { persona_id: personaId }),
+
+  // Relationships
+  listRelationships: (projectId: number) =>
+    rpc<CharacterRelationship[]>("relationship.list", { project_id: projectId }),
+  createRelationship: (data: {
+    project_id: number;
+    persona_id_1: number;
+    persona_id_2: number;
+    relationship_type?: string;
+    description?: string;
+    intimacy_level?: number;
+  }) => rpc<CharacterRelationship>("relationship.create", data),
+  updateRelationship: (relationshipId: number, data: Record<string, unknown>) =>
+    rpc<CharacterRelationship>("relationship.update", { relationship_id: relationshipId, ...data }),
+  deleteRelationship: (relationshipId: number) =>
+    rpc<{ deleted: boolean; id: number }>("relationship.delete", { relationship_id: relationshipId }),
 
   // Pipeline
   translateChapter: (chapterId: number, targetLanguage: string = "en", useCot: boolean = true) =>

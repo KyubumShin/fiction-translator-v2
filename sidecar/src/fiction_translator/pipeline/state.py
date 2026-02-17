@@ -86,6 +86,11 @@ class TranslationState(TypedDict, total=False):
     # ── Persona learning ─────────────────────────────────────────────
     persona_suggestions: list[dict]
 
+    # ── Relationship learning ──────────────────────────────────────────
+    relationship_suggestions: list[dict]
+    existing_relationships: list[dict]
+    relationships_context: str
+
     # ── Unknown terms ─────────────────────────────────────────────────
     unknown_terms: list[dict]
 

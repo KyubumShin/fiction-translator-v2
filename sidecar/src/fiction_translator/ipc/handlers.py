@@ -35,6 +35,12 @@ from fiction_translator.services.project_service import (
     list_projects,
     update_project,
 )
+from fiction_translator.services.relationship_service import (
+    create_relationship,
+    delete_relationship,
+    list_relationships,
+    update_relationship,
+)
 from fiction_translator.services.segment_service import retranslate_segments
 
 logger = logging.getLogger(__name__)
@@ -253,6 +259,41 @@ async def persona_delete(persona_id: int) -> dict:
         db.close()
 
 
+# --- Relationships ---
+async def relationship_list(project_id: int) -> list[dict]:
+    db = get_db()
+    try:
+        return list_relationships(db, project_id)
+    finally:
+        db.close()
+
+async def relationship_create(
+    project_id: int, persona_id_1: int, persona_id_2: int, **kwargs
+) -> dict:
+    db = get_db()
+    try:
+        return create_relationship(
+            db, project_id=project_id, persona_id_1=persona_id_1,
+            persona_id_2=persona_id_2, **kwargs
+        )
+    finally:
+        db.close()
+
+async def relationship_update(relationship_id: int, **kwargs) -> dict:
+    db = get_db()
+    try:
+        return update_relationship(db, relationship_id, **kwargs)
+    finally:
+        db.close()
+
+async def relationship_delete(relationship_id: int) -> dict:
+    db = get_db()
+    try:
+        return delete_relationship(db, relationship_id)
+    finally:
+        db.close()
+
+
 # --- Pipeline ---
 async def pipeline_translate_chapter(chapter_id: int, target_language: str = "en", use_cot: bool = True, **kwargs) -> dict:
     """Start chapter translation pipeline."""
@@ -384,6 +425,10 @@ def get_all_handlers() -> dict[str, Any]:
         "persona.create": persona_create,
         "persona.update": persona_update,
         "persona.delete": persona_delete,
+        "relationship.list": relationship_list,
+        "relationship.create": relationship_create,
+        "relationship.update": relationship_update,
+        "relationship.delete": relationship_delete,
         "pipeline.translate_chapter": pipeline_translate_chapter,
         "pipeline.cancel": pipeline_cancel,
         "segment.update_translation": segment_update_translation,
