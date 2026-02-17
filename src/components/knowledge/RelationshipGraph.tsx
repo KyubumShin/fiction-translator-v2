@@ -90,7 +90,18 @@ export function RelationshipGraph({ projectId, personas, onEditPersona }: Relati
     [relationships],
   );
 
-  const initialNodes = useMemo(() => buildNodes(personas), [personas]);
+  // Only show personas that have at least one relationship
+  const connectedPersonas = useMemo(() => {
+    if (relationships.length === 0) return [];
+    const connectedIds = new Set<number>();
+    for (const r of relationships) {
+      connectedIds.add(r.persona_id_1);
+      connectedIds.add(r.persona_id_2);
+    }
+    return personas.filter((p) => connectedIds.has(p.id));
+  }, [personas, relationships]);
+
+  const initialNodes = useMemo(() => buildNodes(connectedPersonas), [connectedPersonas]);
   const initialEdges = useMemo(
     () => buildEdges(relationships, handleEditRelationship),
     [relationships, handleEditRelationship],
@@ -101,8 +112,8 @@ export function RelationshipGraph({ projectId, personas, onEditPersona }: Relati
 
   // Sync when data changes
   useEffect(() => {
-    setNodes(buildNodes(personas));
-  }, [personas, setNodes]);
+    setNodes(buildNodes(connectedPersonas));
+  }, [connectedPersonas, setNodes]);
 
   useEffect(() => {
     setEdges(buildEdges(relationships, handleEditRelationship));
@@ -178,18 +189,10 @@ export function RelationshipGraph({ projectId, personas, onEditPersona }: Relati
     setDialogOpen(true);
   };
 
-  if (personas.length === 0) {
+  if (personas.length < 2) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        <p>Add at least two personas to visualize relationships.</p>
-      </div>
-    );
-  }
-
-  if (personas.length === 1) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        <p>Add one more persona to create relationships.</p>
+        <p>Add at least two personas to create relationships.</p>
       </div>
     );
   }

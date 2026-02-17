@@ -10,13 +10,16 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       className={cn(
-        "group relative p-6 border border-border rounded-xl bg-card text-left",
+        "group relative p-6 border border-border rounded-xl bg-card text-left cursor-pointer",
         "hover:border-primary/50 hover:shadow-lg transition-all duration-200",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       )}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
     >
       <div
         className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -80,6 +83,6 @@ export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
           </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }

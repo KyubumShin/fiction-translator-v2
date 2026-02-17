@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -106,28 +107,29 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Character Personas</h2>
         <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            <Button
-              variant={view === "list" ? "primary" : "secondary"}
-              size="sm"
-              onClick={() => setView("list")}
-            >
-              List
-            </Button>
-            <Button
-              variant={view === "graph" ? "primary" : "secondary"}
-              size="sm"
-              onClick={() => setView("graph")}
-            >
-              Graph
-            </Button>
-          </div>
-          <Button variant="primary" size="sm" onClick={handleAdd}>
-            + Add Persona
-          </Button>
+          <h2 className="text-lg font-semibold">Character Personas</h2>
+          <button
+            onClick={() => setView(view === "list" ? "graph" : "list")}
+            className={cn(
+              "p-1.5 rounded-lg transition-colors",
+              view === "graph"
+                ? "text-primary bg-primary/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+            )}
+            title={view === "list" ? "Show relationship graph" : "Show list view"}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="6" cy="6" r="2.5" strokeWidth={1.5} />
+              <circle cx="18" cy="6" r="2.5" strokeWidth={1.5} />
+              <circle cx="12" cy="18" r="2.5" strokeWidth={1.5} />
+              <path strokeLinecap="round" strokeWidth={1.5} d="M8 7.5l4 8.5M16 7.5l-4 8.5M8.5 6h7" />
+            </svg>
+          </button>
         </div>
+        <Button variant="primary" size="sm" onClick={handleAdd}>
+          + Add Persona
+        </Button>
       </div>
 
       {view === "list" ? (
