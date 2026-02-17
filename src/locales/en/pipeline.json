@@ -1,0 +1,21 @@
+{
+  "translateButton": {
+    "translate": "Translate",
+    "translating": "Translating..."
+  },
+  "progressOverlay": {
+    "title": "Translating Chapter",
+    "progress": "Progress",
+    "pipelineStages": "Pipeline Stages"
+  },
+  "stages": {
+    "load_context": "Loading Context",
+    "segmentation": "Segmentation",
+    "character_extraction": "Character Extraction",
+    "validation": "Validation",
+    "translation": "Translation",
+    "review": "Review",
+    "persona_learning": "Persona Learning",
+    "finalize": "Finalizing"
+  }
+}

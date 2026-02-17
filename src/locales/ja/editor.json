@@ -1,0 +1,32 @@
+{
+  "loading": "チャプターを読み込み中...",
+  "notFound": "チャプターが見つかりません",
+  "sourceText": "原文",
+  "translation": "翻訳文",
+  "cot": "CoT",
+  "exporting": "エクスポート中...",
+  "export": "エクスポート",
+  "exportSuccess": "エクスポート先: {{path}}",
+  "exportFailed": "エクスポートに失敗しました。もう一度お試しください。",
+  "noSourceContent": "原文がありません。まずこのチャプターに原文テキストを追加してください。",
+  "translateHint": "「翻訳」ボタンをクリックして、このチャプターの翻訳を生成してください。",
+  "cotPanel": {
+    "title": "Chain-of-Thought推論",
+    "segment": "（セグメント #{{id}}）",
+    "notUsed": "この翻訳ではChain-of-Thought推論は使用されていません。CoTトグルを有効にして再翻訳すると、推論データを確認できます。",
+    "notAvailable": "このセグメントの推論データは利用できません。まだ翻訳されていないか、翻訳にChain-of-Thought推論が含まれていない可能性があります。",
+    "notFound": "バッチ #{{batchId}}の推論データが見つかりません。翻訳パイプラインがこのバッチの推論データを保存していない可能性があります。",
+    "situationSummary": "状況要約",
+    "characterEvents": "キャラクターイベント",
+    "reviewFeedback": "レビューフィードバック"
+  },
+  "retranslateDialog": {
+    "title": "セグメント再翻訳",
+    "sourceText": "原文",
+    "currentTranslation": "現在の翻訳",
+    "translationGuide": "翻訳ガイド",
+    "guidePlaceholder": "再翻訳のガイドを記述してください。例：「もっとフォーマルなトーンで」または「このキャラクターは皮肉を言っている」",
+    "retranslating": "再翻訳中...",
+    "retranslate": "再翻訳"
+  }
+}

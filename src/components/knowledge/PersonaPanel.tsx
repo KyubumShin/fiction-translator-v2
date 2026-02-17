@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -18,6 +19,7 @@ interface PersonaPanelProps {
 }
 
 export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
+  const { t } = useTranslation("knowledge");
   const { data: personas, isLoading } = usePersonas(projectId);
   const createPersona = useCreatePersona();
   const updatePersona = useUpdatePersona();
@@ -101,14 +103,14 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
   };
 
   if (isLoading) {
-    return <div className="p-4 text-muted-foreground">Loading personas...</div>;
+    return <div className="p-4 text-muted-foreground">{t("personaPanel.loading")}</div>;
   }
 
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold">Character Personas</h2>
+          <h2 className="text-lg font-semibold">{t("personaPanel.title")}</h2>
           <div className="flex items-center gap-1 rounded-lg bg-secondary p-0.5">
             <button
               onClick={() => setView("list")}
@@ -119,7 +121,7 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              List
+              {t("personaPanel.list")}
             </button>
             <button
               onClick={() => setView("graph")}
@@ -130,12 +132,12 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              Graph
+              {t("personaPanel.graph")}
             </button>
           </div>
         </div>
         <Button variant="primary" size="sm" onClick={handleAdd}>
-          + Add Persona
+          {t("personaPanel.addPersona")}
         </Button>
       </div>
 
@@ -143,8 +145,8 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
         <div className="flex-1 overflow-auto p-4">
           {!personas || personas.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              <p>No personas yet.</p>
-              <p className="text-sm mt-1">Add character personas to improve translation consistency.</p>
+              <p>{t("personaPanel.empty")}</p>
+              <p className="text-sm mt-1">{t("personaPanel.emptyHint")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -170,47 +172,50 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
 
       <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
         <DialogHeader>
-          <DialogTitle>{editingPersona ? "Edit Persona" : "Add Persona"}</DialogTitle>
+          <DialogTitle>{editingPersona ? t("personaPanel.editPersona") : t("personaPanel.addPersonaTitle")}</DialogTitle>
         </DialogHeader>
         <DialogContent>
           <div className="space-y-4">
             {sourceLanguage && (
-              <div className="px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 text-sm text-primary">
-                Write persona details in <span className="font-semibold">{languageName(sourceLanguage)}</span> (source language) for best translation results.
-              </div>
+              <div
+                className="px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 text-sm text-primary"
+                dangerouslySetInnerHTML={{
+                  __html: t("personaPanel.sourceLanguageHint", { language: languageName(sourceLanguage) }),
+                }}
+              />
             )}
             <div>
-              <Label>Name *</Label>
+              <Label>{t("personaPanel.name")}</Label>
               <Input
-                placeholder="Character name"
+                placeholder={t("personaPanel.namePlaceholder")}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
 
             <div>
-              <Label>Aliases</Label>
+              <Label>{t("personaPanel.aliases")}</Label>
               <Input
-                placeholder="Comma-separated aliases"
+                placeholder={t("personaPanel.aliasesPlaceholder")}
                 value={formData.aliases}
                 onChange={(e) => setFormData({ ...formData, aliases: e.target.value })}
               />
-              <p className="text-xs text-muted-foreground mt-1">e.g., "Hero, The Chosen One"</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("personaPanel.aliasesHint")}</p>
             </div>
 
             <div>
-              <Label>Personality</Label>
+              <Label>{t("personaPanel.personality")}</Label>
               <Textarea
-                placeholder="Describe personality traits..."
+                placeholder={t("personaPanel.personalityPlaceholder")}
                 value={formData.personality}
                 onChange={(e) => setFormData({ ...formData, personality: e.target.value })}
               />
             </div>
 
             <div>
-              <Label>Speech Style</Label>
+              <Label>{t("personaPanel.speechStyle")}</Label>
               <Input
-                placeholder="e.g., formal, casual, rough"
+                placeholder={t("personaPanel.speechStylePlaceholder")}
                 value={formData.speech_style}
                 onChange={(e) => setFormData({ ...formData, speech_style: e.target.value })}
               />
@@ -218,7 +223,7 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
 
             <div>
               <Label>
-                Formality Level: {formData.formality_level}
+                {t("personaPanel.formalityLevel")}: {formData.formality_level}
               </Label>
               <input
                 type="range"
@@ -229,24 +234,24 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>Very Casual</span>
-                <span>Very Formal</span>
+                <span>{t("personaPanel.veryCasual")}</span>
+                <span>{t("personaPanel.veryFormal")}</span>
               </div>
             </div>
 
             <div>
-              <Label>Age Group</Label>
+              <Label>{t("personaPanel.ageGroup")}</Label>
               <Select
                 value={formData.age_group}
                 onChange={(e) => setFormData({ ...formData, age_group: e.target.value })}
               >
-                <option value="">Not specified</option>
-                <option value="child">Child</option>
-                <option value="teen">Teen</option>
-                <option value="young_adult">Young Adult</option>
-                <option value="adult">Adult</option>
-                <option value="middle_aged">Middle Aged</option>
-                <option value="elderly">Elderly</option>
+                <option value="">{t("personaPanel.notSpecified")}</option>
+                <option value="child">{t("personaPanel.child")}</option>
+                <option value="teen">{t("personaPanel.teen")}</option>
+                <option value="young_adult">{t("personaPanel.youngAdult")}</option>
+                <option value="adult">{t("personaPanel.adult")}</option>
+                <option value="middle_aged">{t("personaPanel.middleAged")}</option>
+                <option value="elderly">{t("personaPanel.elderly")}</option>
               </Select>
             </div>
           </div>
@@ -258,34 +263,34 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
               size="sm"
               onClick={() => handleDeleteRequest(editingPersona.id)}
             >
-              Delete
+              {t("common:delete")}
             </Button>
           )}
           <div className="flex-1" />
           <Button variant="secondary" size="sm" onClick={() => setIsDialogOpen(false)}>
-            Cancel
+            {t("common:cancel")}
           </Button>
           <Button variant="primary" size="sm" onClick={handleSubmit}>
-            {editingPersona ? "Update" : "Add"}
+            {editingPersona ? t("common:update") : t("common:add")}
           </Button>
         </DialogFooter>
       </Dialog>
 
       <Dialog open={deletingPersonaId !== null} onClose={() => setDeletingPersonaId(null)}>
         <DialogHeader>
-          <DialogTitle>Delete Persona</DialogTitle>
+          <DialogTitle>{t("personaPanel.deletePersona")}</DialogTitle>
         </DialogHeader>
         <DialogContent>
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete this persona? This action cannot be undone.
+            {t("personaPanel.deleteConfirm")}
           </p>
         </DialogContent>
         <DialogFooter>
           <Button variant="secondary" size="sm" onClick={() => setDeletingPersonaId(null)}>
-            Cancel
+            {t("common:cancel")}
           </Button>
           <Button variant="destructive" size="sm" onClick={handleDeleteConfirm}>
-            Delete
+            {t("common:delete")}
           </Button>
         </DialogFooter>
       </Dialog>

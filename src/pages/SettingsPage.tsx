@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/stores/app-store";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -8,8 +9,10 @@ import { Label } from "@/components/ui/Label";
 import { Toast } from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 import { api } from "@/api/tauri-bridge";
+import { supportedLanguages } from "@/lib/i18n";
 
 export function SettingsPage() {
+  const { t, i18n } = useTranslation("settings");
   const navigate = useNavigate();
   const { theme, setTheme } = useAppStore();
   const { toast, showToast, hideToast } = useToast();
@@ -89,12 +92,12 @@ export function SettingsPage() {
     try {
       const result = await api.testProvider(providerKey);
       if (result.success) {
-        showToast(`${provider} connection successful!`, "success");
+        showToast(t("apiKeys.connectionSuccess", { provider }), "success");
       } else {
-        showToast(`${provider} connection failed: ${result.error || "Unknown error"}`, "error");
+        showToast(t("apiKeys.connectionFailed", { provider, error: result.error || "Unknown error" }), "error");
       }
     } catch (error) {
-      showToast(`${provider} connection failed: ${error instanceof Error ? error.message : "Unknown error"}`, "error");
+      showToast(t("apiKeys.connectionFailed", { provider, error: error instanceof Error ? error.message : "Unknown error" }), "error");
     } finally {
       setTesting({ ...testing, [providerKey]: false });
     }
@@ -110,7 +113,6 @@ export function SettingsPage() {
 
       await api.setApiKeys(keysToSave);
 
-      // Refresh which keys exist
       const existingKeys = await api.getApiKeys();
       setKeysExist({
         gemini: existingKeys.gemini || false,
@@ -118,15 +120,24 @@ export function SettingsPage() {
         openai: existingKeys.openai || false,
       });
 
-      // Clear the input fields
       setApiKeys({ gemini: "", claude: "", openai: "" });
 
-      showToast("API keys saved successfully!", "success");
+      showToast(t("apiKeys.saveSuccess"), "success");
     } catch (error) {
-      showToast(`Failed to save API keys: ${error instanceof Error ? error.message : "Unknown error"}`, "error");
+      showToast(t("apiKeys.saveFailed", { error: error instanceof Error ? error.message : "Unknown error" }), "error");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleLanguageChange = (langCode: string) => {
+    i18n.changeLanguage(langCode);
+  };
+
+  const themeLabels: Record<string, string> = {
+    light: t("appearance.light"),
+    dark: t("appearance.dark"),
+    system: t("appearance.system"),
   };
 
   return (
@@ -136,28 +147,28 @@ export function SettingsPage() {
           className="text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
           onClick={() => navigate("/")}
         >
-          ← Back to Projects
+          {t("common:backToProjects")}
         </button>
-        <h1 className="text-4xl font-bold mb-2">Settings</h1>
-        <p className="text-muted-foreground">Configure your preferences and API keys</p>
+        <h1 className="text-4xl font-bold mb-2">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <div className="space-y-6">
         {/* Appearance */}
         <div className="border border-border rounded-xl p-6 bg-card">
-          <h2 className="text-lg font-semibold mb-4">Appearance</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("appearance.title")}</h2>
           <div className="space-y-4">
             <div>
-              <Label className="mb-2">Theme</Label>
+              <Label className="mb-2">{t("appearance.theme")}</Label>
               <div className="flex gap-2">
-                {(["light", "dark", "system"] as const).map((t) => (
+                {(["light", "dark", "system"] as const).map((themeOption) => (
                   <Button
-                    key={t}
-                    variant={theme === t ? "primary" : "secondary"}
+                    key={themeOption}
+                    variant={theme === themeOption ? "primary" : "secondary"}
                     size="sm"
-                    onClick={() => setTheme(t)}
+                    onClick={() => setTheme(themeOption)}
                   >
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                    {themeLabels[themeOption]}
                   </Button>
                 ))}
               </div>
@@ -165,25 +176,43 @@ export function SettingsPage() {
           </div>
         </div>
 
+        {/* Language */}
+        <div className="border border-border rounded-xl p-6 bg-card">
+          <h2 className="text-lg font-semibold mb-4">{t("language.title")}</h2>
+          <div>
+            <Label className="mb-2">{t("language.label")}</Label>
+            <Select
+              value={i18n.language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+            >
+              {supportedLanguages.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.nativeName} ({lang.name})
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+
         {/* API Keys */}
         <div className="border border-border rounded-xl p-6 bg-card">
-          <h2 className="text-lg font-semibold mb-1">LLM API Keys</h2>
+          <h2 className="text-lg font-semibold mb-1">{t("apiKeys.title")}</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Configure your API keys for translation providers
+            {t("apiKeys.subtitle")}
           </p>
 
           <div className="space-y-4">
             {/* Gemini */}
             <div>
               <Label className="mb-2">
-                Google Gemini API Key
+                {t("apiKeys.geminiLabel")}
                 {keysExist.gemini && <span className="ml-2 text-xs text-green-500">●</span>}
               </Label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
                     type={showKeys.gemini ? "text" : "password"}
-                    placeholder={keysExist.gemini ? "Key configured (enter new to update)" : "Enter your Gemini API key"}
+                    placeholder={keysExist.gemini ? t("apiKeys.keyConfigured") : t("apiKeys.enterGeminiKey")}
                     value={apiKeys.gemini}
                     onChange={(e) => setApiKeys({ ...apiKeys, gemini: e.target.value })}
                   />
@@ -198,7 +227,7 @@ export function SettingsPage() {
                   size="sm"
                   onClick={() => setShowKeys({ ...showKeys, gemini: !showKeys.gemini })}
                 >
-                  {showKeys.gemini ? "Hide" : "Show"}
+                  {showKeys.gemini ? t("common:hide") : t("common:show")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -206,7 +235,7 @@ export function SettingsPage() {
                   onClick={() => handleTestConnection("Gemini")}
                   disabled={!keysExist.gemini || testing.gemini}
                 >
-                  {testing.gemini ? "Testing..." : "Test"}
+                  {testing.gemini ? t("apiKeys.testing") : t("common:test")}
                 </Button>
               </div>
             </div>
@@ -214,14 +243,14 @@ export function SettingsPage() {
             {/* Claude */}
             <div>
               <Label className="mb-2">
-                Anthropic Claude API Key
+                {t("apiKeys.claudeLabel")}
                 {keysExist.claude && <span className="ml-2 text-xs text-green-500">●</span>}
               </Label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
                     type={showKeys.claude ? "text" : "password"}
-                    placeholder={keysExist.claude ? "Key configured (enter new to update)" : "Enter your Claude API key"}
+                    placeholder={keysExist.claude ? t("apiKeys.keyConfigured") : t("apiKeys.enterClaudeKey")}
                     value={apiKeys.claude}
                     onChange={(e) => setApiKeys({ ...apiKeys, claude: e.target.value })}
                   />
@@ -236,7 +265,7 @@ export function SettingsPage() {
                   size="sm"
                   onClick={() => setShowKeys({ ...showKeys, claude: !showKeys.claude })}
                 >
-                  {showKeys.claude ? "Hide" : "Show"}
+                  {showKeys.claude ? t("common:hide") : t("common:show")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -244,7 +273,7 @@ export function SettingsPage() {
                   onClick={() => handleTestConnection("Claude")}
                   disabled={!keysExist.claude || testing.claude}
                 >
-                  {testing.claude ? "Testing..." : "Test"}
+                  {testing.claude ? t("apiKeys.testing") : t("common:test")}
                 </Button>
               </div>
             </div>
@@ -252,14 +281,14 @@ export function SettingsPage() {
             {/* OpenAI */}
             <div>
               <Label className="mb-2">
-                OpenAI API Key
+                {t("apiKeys.openaiLabel")}
                 {keysExist.openai && <span className="ml-2 text-xs text-green-500">●</span>}
               </Label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
                     type={showKeys.openai ? "text" : "password"}
-                    placeholder={keysExist.openai ? "Key configured (enter new to update)" : "Enter your OpenAI API key"}
+                    placeholder={keysExist.openai ? t("apiKeys.keyConfigured") : t("apiKeys.enterOpenaiKey")}
                     value={apiKeys.openai}
                     onChange={(e) => setApiKeys({ ...apiKeys, openai: e.target.value })}
                   />
@@ -274,7 +303,7 @@ export function SettingsPage() {
                   size="sm"
                   onClick={() => setShowKeys({ ...showKeys, openai: !showKeys.openai })}
                 >
-                  {showKeys.openai ? "Hide" : "Show"}
+                  {showKeys.openai ? t("common:hide") : t("common:show")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -282,14 +311,14 @@ export function SettingsPage() {
                   onClick={() => handleTestConnection("OpenAI")}
                   disabled={!keysExist.openai || testing.openai}
                 >
-                  {testing.openai ? "Testing..." : "Test"}
+                  {testing.openai ? t("apiKeys.testing") : t("common:test")}
                 </Button>
               </div>
             </div>
 
             <div className="pt-2">
               <Button variant="primary" onClick={handleSaveKeys} disabled={saving}>
-                {saving ? "Saving..." : "Save API Keys"}
+                {saving ? t("apiKeys.saving") : t("apiKeys.saveApiKeys")}
               </Button>
             </div>
           </div>
@@ -297,7 +326,7 @@ export function SettingsPage() {
 
         {/* Default LLM Provider */}
         <div className="border border-border rounded-xl p-6 bg-card">
-          <h2 className="text-lg font-semibold mb-4">Default LLM Provider</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("defaultProvider.title")}</h2>
           <div className="flex gap-2">
             {(["gemini", "claude", "openai"] as const).map((provider) => (
               <Button
@@ -314,10 +343,10 @@ export function SettingsPage() {
 
         {/* Default Languages */}
         <div className="border border-border rounded-xl p-6 bg-card">
-          <h2 className="text-lg font-semibold mb-4">Default Languages</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("defaultLanguages.title")}</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="mb-2">Default Source Language</Label>
+              <Label className="mb-2">{t("defaultLanguages.sourceLanguage")}</Label>
               <Select
                 value={defaultLanguages.source}
                 onChange={(e) => setDefaultLanguages({ ...defaultLanguages, source: e.target.value })}
@@ -331,7 +360,7 @@ export function SettingsPage() {
             </div>
 
             <div>
-              <Label className="mb-2">Default Target Language</Label>
+              <Label className="mb-2">{t("defaultLanguages.targetLanguage")}</Label>
               <Select
                 value={defaultLanguages.target}
                 onChange={(e) => setDefaultLanguages({ ...defaultLanguages, target: e.target.value })}
@@ -348,18 +377,18 @@ export function SettingsPage() {
 
         {/* About */}
         <div className="border border-border rounded-xl p-6 bg-card">
-          <h2 className="text-lg font-semibold mb-4">About</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("about.title")}</h2>
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
-              <span className="font-medium">Version</span>
+              <span className="font-medium">{t("about.version")}</span>
               <span className="text-muted-foreground">2.0.0</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-medium">Platform</span>
+              <span className="font-medium">{t("about.platform")}</span>
               <span className="text-muted-foreground">Tauri v2 + React</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-medium">Backend</span>
+              <span className="font-medium">{t("about.backend")}</span>
               <span className="text-muted-foreground">Python + LangGraph</span>
             </div>
           </div>

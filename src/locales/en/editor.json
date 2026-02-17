@@ -1,0 +1,32 @@
+{
+  "loading": "Loading chapter...",
+  "notFound": "Chapter not found",
+  "sourceText": "Source Text",
+  "translation": "Translation",
+  "cot": "CoT",
+  "exporting": "Exporting...",
+  "export": "Export",
+  "exportSuccess": "Exported to: {{path}}",
+  "exportFailed": "Export failed. Please try again.",
+  "noSourceContent": "No source content. Add source text to this chapter first.",
+  "translateHint": "Click \"Translate\" to generate the translation for this chapter.",
+  "cotPanel": {
+    "title": "Chain-of-Thought Reasoning",
+    "segment": "(Segment #{{id}})",
+    "notUsed": "Chain-of-Thought reasoning was not used for this translation. Enable the CoT toggle and re-translate to see reasoning data.",
+    "notAvailable": "Reasoning data is not available for this segment. It may not have been translated yet, or the translation did not include Chain-of-Thought reasoning.",
+    "notFound": "No reasoning data found for batch #{{batchId}}. The translation pipeline may not have stored reasoning data for this batch.",
+    "situationSummary": "Situation Summary",
+    "characterEvents": "Character Events",
+    "reviewFeedback": "Review Feedback"
+  },
+  "retranslateDialog": {
+    "title": "Re-translate Segment",
+    "sourceText": "Source Text",
+    "currentTranslation": "Current Translation",
+    "translationGuide": "Translation Guide",
+    "guidePlaceholder": "Write instructions to guide the re-translation, e.g., \"Use a more formal tone\" or \"The character is being sarcastic\"",
+    "retranslating": "Re-translating...",
+    "retranslate": "Re-translate"
+  }
+}

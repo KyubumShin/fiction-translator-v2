@@ -1,0 +1,21 @@
+{
+  "translateButton": {
+    "translate": "翻訳",
+    "translating": "翻訳中..."
+  },
+  "progressOverlay": {
+    "title": "チャプター翻訳中",
+    "progress": "進捗",
+    "pipelineStages": "パイプラインステージ"
+  },
+  "stages": {
+    "load_context": "コンテキスト読み込み",
+    "segmentation": "セグメント分割",
+    "character_extraction": "キャラクター抽出",
+    "validation": "検証",
+    "translation": "翻訳",
+    "review": "レビュー",
+    "persona_learning": "ペルソナ学習",
+    "finalize": "仕上げ"
+  }
+}

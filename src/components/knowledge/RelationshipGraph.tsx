@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ReactFlow,
   Background,
@@ -71,6 +72,7 @@ function buildEdges(
 }
 
 export function RelationshipGraph({ projectId, personas, onEditPersona }: RelationshipGraphProps) {
+  const { t } = useTranslation("knowledge");
   const { data: relationships = [] } = useRelationships(projectId);
   const createRelationship = useCreateRelationship();
   const updateRelationship = useUpdateRelationship();
@@ -124,12 +126,10 @@ export function RelationshipGraph({ projectId, personas, onEditPersona }: Relati
       if (connection.source && connection.target && connection.source !== connection.target) {
         setEditingRelationship(null);
         setDialogOpen(true);
-        // Pre-fill will happen via the dialog's default state with these persona IDs
-        // We store them temporarily
         const p1 = Number(connection.source);
         const p2 = Number(connection.target);
         setEditingRelationship({
-          id: 0, // sentinel for "new"
+          id: 0,
           project_id: projectId,
           persona_id_1: Math.min(p1, p2),
           persona_id_2: Math.max(p1, p2),
@@ -192,7 +192,7 @@ export function RelationshipGraph({ projectId, personas, onEditPersona }: Relati
   if (personas.length < 2) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        <p>Add at least two personas to create relationships.</p>
+        <p>{t("relationshipGraph.needTwoPersonas")}</p>
       </div>
     );
   }
@@ -203,19 +203,19 @@ export function RelationshipGraph({ projectId, personas, onEditPersona }: Relati
     <div className="flex-1 relative">
       <div className="absolute top-2 right-2 z-10">
         <Button variant="primary" size="sm" onClick={handleAddRelationship}>
-          + Add Relationship
+          {t("relationshipGraph.addRelationship")}
         </Button>
       </div>
 
       {!hasRelationships && (
         <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none">
           <div className="bg-background/80 backdrop-blur-sm rounded-xl border border-border p-6 text-center max-w-sm pointer-events-auto">
-            <p className="text-sm font-medium mb-2">No relationships yet</p>
+            <p className="text-sm font-medium mb-2">{t("relationshipGraph.noRelationships")}</p>
             <p className="text-xs text-muted-foreground mb-4">
-              Drag from one character node to another, or use the button below to connect them.
+              {t("relationshipGraph.noRelationshipsHint")}
             </p>
             <Button variant="primary" size="sm" onClick={handleAddRelationship}>
-              + Add Relationship
+              {t("relationshipGraph.addRelationship")}
             </Button>
           </div>
         </div>

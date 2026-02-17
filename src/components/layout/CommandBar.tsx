@@ -1,9 +1,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/stores/app-store";
 import { useProjects } from "@/hooks/useProject";
 
 export function CommandBar() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { commandBarOpen, setCommandBarOpen } = useAppStore();
   const { data: projects } = useProjects();
@@ -27,10 +29,10 @@ export function CommandBar() {
   if (!commandBarOpen) return null;
 
   const commands = [
-    { label: "Go to Projects", action: () => navigate("/") },
-    { label: "Go to Settings", action: () => navigate("/settings") },
+    { label: t("commandBar.goToProjects"), action: () => navigate("/") },
+    { label: t("commandBar.goToSettings"), action: () => navigate("/settings") },
     ...(projects || []).map((p) => ({
-      label: `Open: ${p.name}`,
+      label: t("commandBar.openProject", { name: p.name }),
       action: () => navigate(`/project/${p.id}`),
     })),
   ];
@@ -51,7 +53,7 @@ export function CommandBar() {
       <div className="relative z-50 w-full max-w-lg mx-4 bg-card rounded-xl border border-border shadow-2xl">
         <input
           type="text"
-          placeholder="Type a command or search..."
+          placeholder={t("commandBar.placeholder")}
           className="w-full px-4 py-3 bg-transparent border-b border-border focus:outline-none"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -69,7 +71,7 @@ export function CommandBar() {
           ))}
           {filtered.length === 0 && (
             <div className="px-4 py-8 text-center text-muted-foreground text-sm">
-              No results found
+              {t("noResultsFound")}
             </div>
           )}
         </div>

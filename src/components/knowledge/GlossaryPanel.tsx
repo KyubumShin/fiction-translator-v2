@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -10,7 +11,10 @@ interface GlossaryPanelProps {
   projectId: number;
 }
 
+const TERM_TYPE_KEYS = ["all", "general", "name", "place", "item", "skill", "organization"] as const;
+
 export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
+  const { t } = useTranslation("knowledge");
   const { data: entries, isLoading } = useGlossary(projectId);
   const createEntry = useCreateGlossaryEntry();
   const updateEntry = useUpdateGlossaryEntry();
@@ -27,7 +31,10 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
     notes: "",
   });
 
-  const termTypes = ["all", "general", "name", "place", "item", "skill", "organization"];
+  const getTermTypeLabel = (type: string) => {
+    const key = type as keyof typeof t;
+    return t(`glossaryPanel.${key}` as any) || type.charAt(0).toUpperCase() + type.slice(1);
+  };
 
   const handleSubmit = async () => {
     if (!formData.source_term || !formData.translated_term) return;
@@ -71,16 +78,16 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
   ) || [];
 
   if (isLoading) {
-    return <div className="p-4 text-muted-foreground">Loading glossary...</div>;
+    return <div className="p-4 text-muted-foreground">{t("glossaryPanel.loading")}</div>;
   }
 
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Glossary</h2>
+        <h2 className="text-lg font-semibold">{t("glossaryPanel.title")}</h2>
         {!isAdding && (
           <Button variant="primary" size="sm" onClick={() => setIsAdding(true)}>
-            + Add Term
+            {t("glossaryPanel.addTerm")}
           </Button>
         )}
       </div>
@@ -89,12 +96,12 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
         <div className="p-4 border-b border-border bg-accent/5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Input
-              placeholder="Source term"
+              placeholder={t("glossaryPanel.sourceTerm")}
               value={formData.source_term}
               onChange={(e) => setFormData({ ...formData, source_term: e.target.value })}
             />
             <Input
-              placeholder="Translated term"
+              placeholder={t("glossaryPanel.translatedTerm")}
               value={formData.translated_term}
               onChange={(e) => setFormData({ ...formData, translated_term: e.target.value })}
             />
@@ -104,24 +111,24 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
               value={formData.term_type}
               onChange={(e) => setFormData({ ...formData, term_type: e.target.value })}
             >
-              {termTypes.filter(t => t !== "all").map((type) => (
+              {TERM_TYPE_KEYS.filter(t => t !== "all").map((type) => (
                 <option key={type} value={type}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                  {getTermTypeLabel(type)}
                 </option>
               ))}
             </Select>
             <Input
-              placeholder="Notes (optional)"
+              placeholder={t("glossaryPanel.notesOptional")}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             />
           </div>
           <div className="flex gap-2">
             <Button variant="primary" size="sm" onClick={handleSubmit}>
-              {editingId ? "Update" : "Add"}
+              {editingId ? t("common:update") : t("common:add")}
             </Button>
             <Button variant="secondary" size="sm" onClick={handleCancel}>
-              Cancel
+              {t("common:cancel")}
             </Button>
           </div>
         </div>
@@ -129,7 +136,7 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
 
       <div className="p-4 border-b border-border">
         <div className="flex gap-2 flex-wrap">
-          {termTypes.map((type) => (
+          {TERM_TYPE_KEYS.map((type) => (
             <button
               key={type}
               className={cn(
@@ -140,7 +147,7 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
               )}
               onClick={() => setFilterType(type)}
             >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
+              {getTermTypeLabel(type)}
             </button>
           ))}
         </div>
@@ -149,17 +156,17 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
       <div className="flex-1 overflow-auto">
         {filteredEntries.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
-            {filterType === "all" ? "No glossary entries yet." : `No ${filterType} terms.`}
+            {filterType === "all" ? t("glossaryPanel.empty") : t("glossaryPanel.emptyFiltered", { type: getTermTypeLabel(filterType) })}
           </div>
         ) : (
           <table className="w-full">
             <thead className="bg-accent/30 sticky top-0">
               <tr>
-                <th className="text-left p-3 text-sm font-semibold">Source</th>
-                <th className="text-left p-3 text-sm font-semibold">Translation</th>
-                <th className="text-left p-3 text-sm font-semibold">Type</th>
-                <th className="text-left p-3 text-sm font-semibold">Notes</th>
-                <th className="text-right p-3 text-sm font-semibold">Actions</th>
+                <th className="text-left p-3 text-sm font-semibold">{t("glossaryPanel.source")}</th>
+                <th className="text-left p-3 text-sm font-semibold">{t("glossaryPanel.translation")}</th>
+                <th className="text-left p-3 text-sm font-semibold">{t("glossaryPanel.type")}</th>
+                <th className="text-left p-3 text-sm font-semibold">{t("glossaryPanel.notes")}</th>
+                <th className="text-right p-3 text-sm font-semibold">{t("glossaryPanel.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -173,7 +180,7 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
                     </span>
                     {entry.auto_detected && (
                       <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium">
-                        auto
+                        {t("glossaryPanel.auto")}
                       </span>
                     )}
                   </td>
@@ -181,14 +188,14 @@ export function GlossaryPanel({ projectId }: GlossaryPanelProps) {
                   <td className="p-3 text-right">
                     <div className="flex gap-1 justify-end">
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(entry)}>
-                        Edit
+                        {t("common:edit")}
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => deleteEntry.mutate(entry.id)}
                       >
-                        Delete
+                        {t("common:delete")}
                       </Button>
                     </div>
                   </td>

@@ -1,0 +1,33 @@
+{
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "edit": "Edit",
+  "add": "Add",
+  "update": "Update",
+  "create": "Create",
+  "back": "Back",
+  "loading": "Loading...",
+  "show": "Show",
+  "hide": "Hide",
+  "test": "Test",
+  "export": "Export",
+  "close": "Close",
+  "actions": "Actions",
+  "backToProjects": "\u2190 Back to Projects",
+  "noResultsFound": "No results found",
+  "sidebar": {
+    "appName": "Fiction Translator",
+    "version": "v2.0",
+    "projects": "Projects",
+    "settings": "Settings",
+    "recentProjects": "Recent Projects",
+    "sidecarConnected": "Sidecar Connected"
+  },
+  "commandBar": {
+    "placeholder": "Type a command or search...",
+    "goToProjects": "Go to Projects",
+    "goToSettings": "Go to Settings",
+    "openProject": "Open: {{name}}"
+  }
+}

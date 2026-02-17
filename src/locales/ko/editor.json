@@ -1,0 +1,32 @@
+{
+  "loading": "챕터 로딩 중...",
+  "notFound": "챕터를 찾을 수 없습니다",
+  "sourceText": "원문",
+  "translation": "번역문",
+  "cot": "CoT",
+  "exporting": "내보내기 중...",
+  "export": "내보내기",
+  "exportSuccess": "내보내기 완료: {{path}}",
+  "exportFailed": "내보내기 실패. 다시 시도해주세요.",
+  "noSourceContent": "원문이 없습니다. 먼저 이 챕터에 원문 텍스트를 추가하세요.",
+  "translateHint": "\"번역\" 버튼을 클릭하여 이 챕터의 번역을 생성하세요.",
+  "cotPanel": {
+    "title": "사고 과정(Chain-of-Thought) 추론",
+    "segment": "(세그먼트 #{{id}})",
+    "notUsed": "이 번역에는 사고 과정 추론이 사용되지 않았습니다. CoT 토글을 활성화하고 다시 번역하면 추론 데이터를 볼 수 있습니다.",
+    "notAvailable": "이 세그먼트의 추론 데이터를 사용할 수 없습니다. 아직 번역되지 않았거나, 번역에 사고 과정 추론이 포함되지 않았을 수 있습니다.",
+    "notFound": "배치 #{{batchId}}의 추론 데이터를 찾을 수 없습니다. 번역 파이프라인이 이 배치의 추론 데이터를 저장하지 않았을 수 있습니다.",
+    "situationSummary": "상황 요약",
+    "characterEvents": "캐릭터 이벤트",
+    "reviewFeedback": "리뷰 피드백"
+  },
+  "retranslateDialog": {
+    "title": "세그먼트 재번역",
+    "sourceText": "원문",
+    "currentTranslation": "현재 번역",
+    "translationGuide": "번역 가이드",
+    "guidePlaceholder": "재번역을 안내하는 지침을 작성하세요. 예: \"더 격식 있는 어조로\" 또는 \"이 캐릭터는 비꼬는 중입니다\"",
+    "retranslating": "재번역 중...",
+    "retranslate": "재번역"
+  }
+}

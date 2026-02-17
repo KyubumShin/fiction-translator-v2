@@ -1,0 +1,34 @@
+{
+  "title": "Projects",
+  "subtitle": "Manage your translation projects",
+  "newProject": "+ New Project",
+  "loading": "Loading projects...",
+  "empty": {
+    "title": "No projects yet",
+    "description": "Create your first translation project to get started with Fiction Translator",
+    "action": "Create your first project"
+  },
+  "createDialog": {
+    "title": "Create New Project",
+    "projectName": "Project Name *",
+    "projectNamePlaceholder": "My Translation Project",
+    "description": "Description",
+    "descriptionPlaceholder": "Brief description of the project...",
+    "sourceLanguage": "Source Language *",
+    "targetLanguage": "Target Language *",
+    "genre": "Genre",
+    "genrePlaceholder": "e.g., Fantasy, Romance, Sci-Fi",
+    "createButton": "Create Project"
+  },
+  "deleteDialog": {
+    "title": "Delete Project",
+    "message": "Delete project \"{{name}}\"? This will remove all chapters, translations, and glossary entries. This cannot be undone.",
+    "confirm": "Delete",
+    "loading": "Deleting..."
+  },
+  "card": {
+    "chapter_one": "{{count}} chapter",
+    "chapter_other": "{{count}} chapters",
+    "deleteTooltip": "Delete project"
+  }
+}

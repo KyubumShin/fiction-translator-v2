@@ -1,5 +1,6 @@
 import { useState, Fragment } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChapter, useEditorData } from "@/hooks/useChapter";
 import { useProgress } from "@/hooks/useProgress";
@@ -18,6 +19,7 @@ import { useEditorStore } from "@/stores/editor-store";
 import { cn } from "@/lib/cn";
 
 export function EditorPage() {
+  const { t } = useTranslation("editor");
   const { chapterId } = useParams<{ chapterId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -40,7 +42,6 @@ export function EditorPage() {
   const handleSegmentEdit = async (segmentId: number, newText: string) => {
     try {
       await api.updateSegmentTranslation(segmentId, newText, targetLanguage);
-      // Refetch editor data after edit
       queryClient.invalidateQueries({ queryKey: ["editor-data", id] });
     } catch (err) {
       console.error("Failed to update segment:", err);
@@ -52,10 +53,10 @@ export function EditorPage() {
     setExporting(true);
     try {
       const result = await api.exportChapterTxt(id, targetLanguage);
-      showToast(`Exported to: ${result.path}`, "success");
+      showToast(t("exportSuccess", { path: result.path }), "success");
     } catch (err) {
       console.error("Export failed:", err);
-      showToast("Export failed. Please try again.", "error");
+      showToast(t("exportFailed"), "error");
     } finally {
       setExporting(false);
     }
@@ -74,7 +75,7 @@ export function EditorPage() {
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="text-muted-foreground">Loading chapter...</div>
+        <div className="text-muted-foreground">{t("loading")}</div>
       </div>
     );
   }
@@ -82,7 +83,7 @@ export function EditorPage() {
   if (!chapter) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="text-muted-foreground">Chapter not found</div>
+        <div className="text-muted-foreground">{t("notFound")}</div>
       </div>
     );
   }
@@ -91,7 +92,6 @@ export function EditorPage() {
   const translatedText = editorData?.translated_connected_text || chapter.translated_content || "";
   const segmentMap = editorData?.segment_map || [];
 
-  // Find segment data for the retranslate dialog
   const retranslateSegment = retranslateSegmentId !== null
     ? segmentMap.find((s) => s.segment_id === retranslateSegmentId)
     : null;
@@ -115,14 +115,13 @@ export function EditorPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              Back
+              {t("common:back")}
             </button>
             <div className="w-px h-5 bg-border" />
             <h1 className="text-lg font-semibold">{chapter.title}</h1>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Language Selector */}
             <Select
               className="h-9 w-auto"
               value={targetLanguage}
@@ -136,7 +135,7 @@ export function EditorPage() {
             </Select>
 
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>CoT</span>
+              <span>{t("cot")}</span>
               <button
                 role="switch"
                 aria-checked={useCoT}
@@ -168,7 +167,7 @@ export function EditorPage() {
               onClick={handleExport}
               disabled={!translatedText || exporting}
             >
-              {exporting ? "Exporting..." : "Export"}
+              {exporting ? t("exporting") : t("export")}
             </Button>
           </div>
         </div>
@@ -188,10 +187,9 @@ export function EditorPage() {
         </>
       ) : (
         <div className="flex-1 flex overflow-hidden">
-          {/* Source text preview */}
           <div className="flex-1 overflow-auto p-8">
             <h2 className="text-xs font-semibold text-muted-foreground mb-6 uppercase tracking-wide">
-              Source Text
+              {t("sourceText")}
             </h2>
             {sourceText ? (
               <div className="prose prose-slate dark:prose-invert max-w-none">
@@ -210,26 +208,23 @@ export function EditorPage() {
               </div>
             ) : (
               <div className="text-center text-muted-foreground">
-                <p>No source content. Add source text to this chapter first.</p>
+                <p>{t("noSourceContent")}</p>
               </div>
             )}
           </div>
 
-          {/* Right side: placeholder */}
           <div className="flex-1 border-l border-border flex items-center justify-center bg-card/30">
             <div className="text-center max-w-xs">
               <p className="text-muted-foreground text-sm">
-                Click "Translate" to generate the translation for this chapter.
+                {t("translateHint")}
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Progress Overlay */}
       {isRunning && <ProgressOverlay />}
 
-      {/* Re-translate Dialog */}
       <RetranslateDialog
         open={retranslateSegmentId !== null}
         onClose={() => setRetranslateSegmentId(null)}
@@ -238,7 +233,6 @@ export function EditorPage() {
         onRetranslate={handleRetranslateSubmit}
       />
 
-      {/* Toast Notifications */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );

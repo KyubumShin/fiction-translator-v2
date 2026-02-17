@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
@@ -18,6 +19,7 @@ export function RetranslateDialog({
   currentTranslation,
   onRetranslate,
 }: RetranslateDialogProps) {
+  const { t } = useTranslation("editor");
   const [userGuide, setUserGuide] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -44,12 +46,12 @@ export function RetranslateDialog({
   return (
     <Dialog open={open} onClose={handleClose}>
       <DialogHeader>
-        <DialogTitle>Re-translate Segment</DialogTitle>
+        <DialogTitle>{t("retranslateDialog.title")}</DialogTitle>
       </DialogHeader>
       <DialogContent className="space-y-4">
         <div>
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Source Text
+            {t("retranslateDialog.sourceText")}
           </label>
           <div className="mt-1 p-3 bg-muted/50 rounded-lg text-sm leading-relaxed max-h-32 overflow-auto whitespace-pre-wrap">
             {sourceText}
@@ -58,7 +60,7 @@ export function RetranslateDialog({
 
         <div>
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Current Translation
+            {t("retranslateDialog.currentTranslation")}
           </label>
           <div className="mt-1 p-3 bg-muted/50 rounded-lg text-sm leading-relaxed max-h-32 overflow-auto whitespace-pre-wrap">
             {currentTranslation}
@@ -67,20 +69,20 @@ export function RetranslateDialog({
 
         <div>
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Translation Guide
+            {t("retranslateDialog.translationGuide")}
           </label>
           <Textarea
             className="mt-1 min-h-[100px] resize-none"
             value={userGuide}
             onChange={(e) => setUserGuide(e.target.value)}
-            placeholder='Write instructions to guide the re-translation, e.g., "Use a more formal tone" or "The character is being sarcastic"'
+            placeholder={t("retranslateDialog.guidePlaceholder")}
             disabled={isLoading}
           />
         </div>
       </DialogContent>
       <DialogFooter>
         <Button variant="secondary" size="sm" onClick={handleClose} disabled={isLoading}>
-          Cancel
+          {t("common:cancel")}
         </Button>
         <Button
           variant="primary"
@@ -88,7 +90,7 @@ export function RetranslateDialog({
           onClick={handleSubmit}
           disabled={isLoading || !userGuide.trim()}
         >
-          {isLoading ? "Re-translating..." : "Re-translate"}
+          {isLoading ? t("retranslateDialog.retranslating") : t("retranslateDialog.retranslate")}
         </Button>
       </DialogFooter>
     </Dialog>

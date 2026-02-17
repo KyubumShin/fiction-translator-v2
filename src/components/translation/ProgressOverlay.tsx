@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useProgress } from "@/hooks/useProgress";
 import { PipelineStageIndicator } from "./PipelineStageIndicator";
 import { PIPELINE_STAGES } from "@/lib/constants";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { api } from "@/api/tauri-bridge";
 
 export function ProgressOverlay() {
+  const { t } = useTranslation("pipeline");
   const { isRunning, progress, currentStage, message } = useProgress();
 
   if (!isRunning) {
@@ -15,7 +17,6 @@ export function ProgressOverlay() {
     await api.cancelPipeline();
   };
 
-  // Map current stage to pipeline stages
   const getStageStatus = (stageKey: string): "completed" | "active" | "pending" => {
     if (!currentStage) return "pending";
 
@@ -32,9 +33,9 @@ export function ProgressOverlay() {
       <div className="bg-card border border-border rounded-xl shadow-2xl p-8 w-full max-w-md">
         {/* Header */}
         <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Translating Chapter</h2>
+          <h2 className="text-xl font-semibold mb-2">{t("progressOverlay.title")}</h2>
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>Progress</span>
+            <span>{t("progressOverlay.progress")}</span>
             <span className="font-mono">{Math.round(progress * 100)}%</span>
           </div>
         </div>
@@ -50,13 +51,13 @@ export function ProgressOverlay() {
         {/* Pipeline Stages */}
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wide">
-            Pipeline Stages
+            {t("progressOverlay.pipelineStages")}
           </h3>
           <div className="space-y-3">
             {PIPELINE_STAGES.map((stage) => (
               <PipelineStageIndicator
                 key={stage.key}
-                label={stage.label}
+                label={t(`stages.${stage.key}` as any)}
                 status={getStageStatus(stage.key)}
                 detail={currentStage === stage.key ? message : undefined}
               />
@@ -67,7 +68,7 @@ export function ProgressOverlay() {
         {/* Cancel Button */}
         <div className="flex justify-end pt-4 border-t border-border">
           <Button variant="secondary" size="sm" onClick={handleCancel}>
-            Cancel
+            {t("common:cancel")}
           </Button>
         </div>
       </div>

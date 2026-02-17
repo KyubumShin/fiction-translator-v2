@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/Button";
 import type { Persona } from "@/api/types";
 import { cn } from "@/lib/cn";
@@ -10,12 +11,14 @@ interface PersonaSummaryCardProps {
 }
 
 export function PersonaSummaryCard({ persona, onEdit, onDelete, onShowGraph }: PersonaSummaryCardProps) {
+  const { t } = useTranslation("knowledge");
+
   const getFormalityLabel = (level: number) => {
-    if (level <= 2) return "Very Casual";
-    if (level <= 4) return "Casual";
-    if (level <= 6) return "Neutral";
-    if (level <= 8) return "Formal";
-    return "Very Formal";
+    if (level <= 2) return t("personaPanel.veryCasual");
+    if (level <= 4) return t("personaPanel.casual");
+    if (level <= 6) return t("personaPanel.neutral");
+    if (level <= 8) return t("personaPanel.formal");
+    return t("personaPanel.veryFormal");
   };
 
   const getFormalityColor = (level: number) => {
@@ -47,14 +50,14 @@ export function PersonaSummaryCard({ persona, onEdit, onDelete, onShowGraph }: P
         <div className="flex items-center gap-2">
           {persona.auto_detected && (
             <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium">
-              Auto
+              {t("personaPanel.auto")}
             </span>
           )}
           {onShowGraph && (
             <button
               onClick={(e) => { e.stopPropagation(); onShowGraph(); }}
               className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-              title="Show relationships"
+              title={t("personaPanel.showRelationships")}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <circle cx="6" cy="6" r="2.5" strokeWidth={1.5} />
@@ -67,7 +70,7 @@ export function PersonaSummaryCard({ persona, onEdit, onDelete, onShowGraph }: P
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            title="Delete persona"
+            title={t("personaPanel.deletePersonaTooltip")}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -84,7 +87,7 @@ export function PersonaSummaryCard({ persona, onEdit, onDelete, onShowGraph }: P
 
       {persona.speech_style && (
         <div className="mb-3 p-2 rounded-md bg-accent/30 border border-border/50">
-          <div className="text-xs text-muted-foreground mb-1">Speech Style</div>
+          <div className="text-xs text-muted-foreground mb-1">{t("personaPanel.speechStyle")}</div>
           <div className="text-sm font-medium">{persona.speech_style}</div>
         </div>
       )}
@@ -92,7 +95,7 @@ export function PersonaSummaryCard({ persona, onEdit, onDelete, onShowGraph }: P
       <div className="space-y-2 mb-4">
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-muted-foreground">Formality Level</span>
+            <span className="text-xs text-muted-foreground">{t("personaPanel.formalityLevel")}</span>
             <span className="text-xs font-medium">{getFormalityLabel(persona.formality_level)}</span>
           </div>
           <div className="flex gap-1">
@@ -112,13 +115,13 @@ export function PersonaSummaryCard({ persona, onEdit, onDelete, onShowGraph }: P
 
         {persona.age_group && (
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Age Group</span>
+            <span className="text-muted-foreground">{t("personaPanel.ageGroup")}</span>
             <span className="font-medium">{persona.age_group}</span>
           </div>
         )}
 
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Appearances</span>
+          <span className="text-muted-foreground">{t("personaPanel.appearances")}</span>
           <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-semibold">
             {persona.appearance_count}
           </span>
@@ -126,7 +129,7 @@ export function PersonaSummaryCard({ persona, onEdit, onDelete, onShowGraph }: P
       </div>
 
       <Button variant="secondary" size="sm" className="w-full" onClick={onEdit}>
-        Edit Details
+        {t("personaPanel.editDetails")}
       </Button>
     </div>
   );

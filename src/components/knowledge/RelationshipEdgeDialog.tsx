@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/Button";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
@@ -16,7 +17,7 @@ const RELATIONSHIP_TYPES = [
   "subordinate",
   "enemy",
   "ally",
-];
+] as const;
 
 interface RelationshipEdgeDialogProps {
   open: boolean;
@@ -41,6 +42,7 @@ export function RelationshipEdgeDialog({
   onSave,
   onDelete,
 }: RelationshipEdgeDialogProps) {
+  const { t } = useTranslation("knowledge");
   const [personaId1, setPersonaId1] = useState<number>(0);
   const [personaId2, setPersonaId2] = useState<number>(0);
   const [type, setType] = useState("acquaintance");
@@ -80,19 +82,19 @@ export function RelationshipEdgeDialog({
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogHeader>
-        <DialogTitle>{isEditing ? "Edit Relationship" : "Add Relationship"}</DialogTitle>
+        <DialogTitle>{isEditing ? t("relationshipDialog.editTitle") : t("relationshipDialog.addTitle")}</DialogTitle>
       </DialogHeader>
       <DialogContent>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Character 1</Label>
+              <Label>{t("relationshipDialog.character1")}</Label>
               <Select
                 value={String(personaId1)}
                 onChange={(e) => setPersonaId1(Number(e.target.value))}
                 disabled={isEditing}
               >
-                <option value="0">Select...</option>
+                <option value="0">{t("relationshipDialog.select")}</option>
                 {personas.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -101,13 +103,13 @@ export function RelationshipEdgeDialog({
               </Select>
             </div>
             <div>
-              <Label>Character 2</Label>
+              <Label>{t("relationshipDialog.character2")}</Label>
               <Select
                 value={String(personaId2)}
                 onChange={(e) => setPersonaId2(Number(e.target.value))}
                 disabled={isEditing}
               >
-                <option value="0">Select...</option>
+                <option value="0">{t("relationshipDialog.select")}</option>
                 {personas.filter((p) => p.id !== personaId1).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -118,31 +120,31 @@ export function RelationshipEdgeDialog({
           </div>
 
           {personaId1 > 0 && personaId2 > 0 && personaId1 === personaId2 && (
-            <p className="text-sm text-destructive">Characters must be different.</p>
+            <p className="text-sm text-destructive">{t("relationshipDialog.differentCharacters")}</p>
           )}
 
           <div>
-            <Label>Relationship Type</Label>
+            <Label>{t("relationshipDialog.relationshipType")}</Label>
             <Select value={type} onChange={(e) => setType(e.target.value)}>
-              {RELATIONSHIP_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
+              {RELATIONSHIP_TYPES.map((rt) => (
+                <option key={rt} value={rt}>
+                  {t(`relationshipDialog.${rt}` as any)}
                 </option>
               ))}
             </Select>
           </div>
 
           <div>
-            <Label>Description</Label>
+            <Label>{t("relationshipDialog.description")}</Label>
             <Textarea
-              placeholder="Describe the relationship..."
+              placeholder={t("relationshipDialog.descriptionPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
           <div>
-            <Label>Intimacy Level: {intimacy}</Label>
+            <Label>{t("relationshipDialog.intimacyLevel")}: {intimacy}</Label>
             <input
               type="range"
               min="1"
@@ -152,8 +154,8 @@ export function RelationshipEdgeDialog({
               className="w-full"
             />
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>Distant</span>
-              <span>Very Close</span>
+              <span>{t("relationshipDialog.distant")}</span>
+              <span>{t("relationshipDialog.veryClose")}</span>
             </div>
           </div>
         </div>
@@ -165,15 +167,15 @@ export function RelationshipEdgeDialog({
             size="sm"
             onClick={() => onDelete(relationship!.id)}
           >
-            Delete
+            {t("common:delete")}
           </Button>
         )}
         <div className="flex-1" />
         <Button variant="secondary" size="sm" onClick={onClose}>
-          Cancel
+          {t("common:cancel")}
         </Button>
         <Button variant="primary" size="sm" onClick={handleSave} disabled={!canSave}>
-          {isEditing ? "Update" : "Add"}
+          {isEditing ? t("common:update") : t("common:add")}
         </Button>
       </DialogFooter>
     </Dialog>

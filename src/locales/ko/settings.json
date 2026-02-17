@@ -1,0 +1,47 @@
+{
+  "title": "설정",
+  "subtitle": "환경 설정 및 API 키를 관리하세요",
+  "appearance": {
+    "title": "외관",
+    "theme": "테마",
+    "light": "라이트",
+    "dark": "다크",
+    "system": "시스템"
+  },
+  "language": {
+    "title": "언어",
+    "label": "인터페이스 언어"
+  },
+  "apiKeys": {
+    "title": "LLM API 키",
+    "subtitle": "번역 제공업체의 API 키를 설정하세요",
+    "geminiLabel": "Google Gemini API 키",
+    "claudeLabel": "Anthropic Claude API 키",
+    "openaiLabel": "OpenAI API 키",
+    "keyConfigured": "키 설정됨 (새 키를 입력하여 업데이트)",
+    "enterGeminiKey": "Gemini API 키를 입력하세요",
+    "enterClaudeKey": "Claude API 키를 입력하세요",
+    "enterOpenaiKey": "OpenAI API 키를 입력하세요",
+    "testing": "테스트 중...",
+    "saving": "저장 중...",
+    "saveApiKeys": "API 키 저장",
+    "connectionSuccess": "{{provider}} 연결 성공!",
+    "connectionFailed": "{{provider}} 연결 실패: {{error}}",
+    "saveSuccess": "API 키가 성공적으로 저장되었습니다!",
+    "saveFailed": "API 키 저장 실패: {{error}}"
+  },
+  "defaultProvider": {
+    "title": "기본 LLM 제공업체"
+  },
+  "defaultLanguages": {
+    "title": "기본 언어",
+    "sourceLanguage": "기본 원본 언어",
+    "targetLanguage": "기본 번역 언어"
+  },
+  "about": {
+    "title": "정보",
+    "version": "버전",
+    "platform": "플랫폼",
+    "backend": "백엔드"
+  }
+}

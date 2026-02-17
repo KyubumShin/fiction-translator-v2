@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { formatRelativeTime, languageName } from "@/lib/formatters";
 import type { Project } from "@/api/types";
 import { cn } from "@/lib/cn";
@@ -9,6 +10,8 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
+  const { t } = useTranslation("projects");
+
   return (
     <div
       role="button"
@@ -34,7 +37,7 @@ export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
             e.stopPropagation();
             onDelete();
           }}
-          title="Delete project"
+          title={t("card.deleteTooltip")}
         >
           <svg
             className="w-4 h-4"
@@ -73,7 +76,7 @@ export function ProjectCard({ project, onClick, onDelete }: ProjectCardProps) {
           {project.chapter_count !== undefined && (
             <div className="flex items-center gap-1.5">
               <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                {project.chapter_count} {project.chapter_count === 1 ? 'chapter' : 'chapters'}
+                {t("card.chapter", { count: project.chapter_count })}
               </span>
             </div>
           )}

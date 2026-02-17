@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useChapters, useDeleteChapter } from "@/hooks/useChapter";
 import { ChapterCard } from "./ChapterCard";
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from "@/components/ui/Dialog";
@@ -12,6 +13,7 @@ interface ChapterListProps {
 }
 
 export function ChapterList({ projectId, onSelectChapter }: ChapterListProps) {
+  const { t } = useTranslation("project");
   const navigate = useNavigate();
   const { data: chapters, isLoading } = useChapters(projectId);
   const deleteChapter = useDeleteChapter();
@@ -56,8 +58,8 @@ export function ChapterList({ projectId, onSelectChapter }: ChapterListProps) {
   if (!chapters || chapters.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        <p>No chapters yet.</p>
-        <p className="text-sm mt-1">Add your first chapter to get started.</p>
+        <p>{t("chapters.empty")}</p>
+        <p className="text-sm mt-1">{t("chapters.emptyHint")}</p>
       </div>
     );
   }
@@ -78,17 +80,19 @@ export function ChapterList({ projectId, onSelectChapter }: ChapterListProps) {
 
       <Dialog open={deletingChapter !== null} onClose={() => setDeletingChapter(null)}>
         <DialogHeader>
-          <DialogTitle>Delete Chapter</DialogTitle>
+          <DialogTitle>{t("chapters.deleteDialog.title")}</DialogTitle>
         </DialogHeader>
         <DialogContent>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete <strong>{deletingChapter?.title}</strong>?
-            This will permanently remove the chapter and all its segments and translations.
-          </p>
+          <p
+            className="text-sm text-muted-foreground"
+            dangerouslySetInnerHTML={{
+              __html: t("chapters.deleteDialog.message", { title: deletingChapter?.title }),
+            }}
+          />
         </DialogContent>
         <DialogFooter>
           <Button variant="secondary" size="sm" onClick={() => setDeletingChapter(null)}>
-            Cancel
+            {t("common:cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -96,7 +100,7 @@ export function ChapterList({ projectId, onSelectChapter }: ChapterListProps) {
             onClick={handleDeleteConfirm}
             disabled={deleteChapter.isPending}
           >
-            {deleteChapter.isPending ? "Deleting..." : "Delete"}
+            {deleteChapter.isPending ? t("chapters.deleteDialog.loading") : t("chapters.deleteDialog.confirm")}
           </Button>
         </DialogFooter>
       </Dialog>

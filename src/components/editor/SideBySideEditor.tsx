@@ -1,4 +1,5 @@
 import { useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ConnectedTextView } from "./ConnectedTextView";
 import { SegmentHighlighter } from "./SegmentHighlighter";
 import type { SegmentMapEntry } from "@/api/types";
@@ -18,6 +19,7 @@ export function SideBySideEditor({
   onSegmentEdit,
   onSegmentRetranslate,
 }: SideBySideEditorProps) {
+  const { t } = useTranslation("editor");
   const sourceRef = useRef<HTMLDivElement>(null);
   const translatedRef = useRef<HTMLDivElement>(null);
 
@@ -67,7 +69,7 @@ export function SideBySideEditor({
             {/* Source Pane */}
             <div ref={sourceRef} className="overflow-auto p-8">
               <h2 className="text-xs font-semibold text-muted-foreground mb-6 uppercase tracking-wide">
-                Source Text
+                {t("sourceText")}
               </h2>
               <ConnectedTextView
                 text={sourceText}
@@ -81,7 +83,7 @@ export function SideBySideEditor({
             {/* Translated Pane */}
             <div ref={translatedRef} className="overflow-auto p-8 bg-card/30">
               <h2 className="text-xs font-semibold text-muted-foreground mb-6 uppercase tracking-wide">
-                Translation
+                {t("translation")}
               </h2>
               <ConnectedTextView
                 text={translatedText}

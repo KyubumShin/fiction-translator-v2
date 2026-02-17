@@ -1,0 +1,52 @@
+{
+  "loading": "Loading project...",
+  "notFound": "Project not found",
+  "tabs": {
+    "chapters": "Chapters",
+    "glossary": "Glossary",
+    "personas": "Personas"
+  },
+  "editProject": "Edit Project",
+  "editDialog": {
+    "title": "Edit Project",
+    "projectName": "Project Name *",
+    "projectNamePlaceholder": "My Translation Project",
+    "description": "Description",
+    "descriptionPlaceholder": "Brief description of the project...",
+    "saveChanges": "Save Changes"
+  },
+  "deleteDialog": {
+    "title": "Delete Project",
+    "message": "Delete project \"{{name}}\"? This cannot be undone.",
+    "confirm": "Delete",
+    "loading": "Deleting..."
+  },
+  "chapters": {
+    "title": "Chapters",
+    "addChapter": "+ Add Chapter",
+    "empty": "No chapters yet.",
+    "emptyHint": "Add your first chapter to get started.",
+    "addDialog": {
+      "title": "Add Chapter",
+      "chapterTitle": "Chapter Title *",
+      "chapterTitlePlaceholder": "Chapter 1: The Beginning",
+      "sourceContent": "Source Content",
+      "sourceContentPlaceholder": "Paste your source text here...",
+      "sourceContentHint": "You can also add content later in the editor",
+      "addButton": "Add Chapter"
+    },
+    "deleteDialog": {
+      "title": "Delete Chapter",
+      "message": "Are you sure you want to delete <strong>{{title}}</strong>? This will permanently remove the chapter and all its segments and translations.",
+      "confirm": "Delete",
+      "loading": "Deleting..."
+    },
+    "card": {
+      "segments": "{{translated}} / {{total}} segments",
+      "translationStale": "Translation stale",
+      "continue": "Continue",
+      "translate": "Translate",
+      "deleteTooltip": "Delete chapter"
+    }
+  }
+}

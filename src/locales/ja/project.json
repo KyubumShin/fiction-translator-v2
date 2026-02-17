@@ -1,0 +1,52 @@
+{
+  "loading": "プロジェクトを読み込み中...",
+  "notFound": "プロジェクトが見つかりません",
+  "tabs": {
+    "chapters": "チャプター",
+    "glossary": "用語集",
+    "personas": "ペルソナ"
+  },
+  "editProject": "プロジェクト編集",
+  "editDialog": {
+    "title": "プロジェクト編集",
+    "projectName": "プロジェクト名 *",
+    "projectNamePlaceholder": "翻訳プロジェクト",
+    "description": "説明",
+    "descriptionPlaceholder": "プロジェクトの簡単な説明...",
+    "saveChanges": "変更を保存"
+  },
+  "deleteDialog": {
+    "title": "プロジェクト削除",
+    "message": "プロジェクト「{{name}}」を削除しますか？この操作は元に戻せません。",
+    "confirm": "削除",
+    "loading": "削除中..."
+  },
+  "chapters": {
+    "title": "チャプター",
+    "addChapter": "+ チャプター追加",
+    "empty": "チャプターがありません。",
+    "emptyHint": "最初のチャプターを追加して始めましょう。",
+    "addDialog": {
+      "title": "チャプター追加",
+      "chapterTitle": "チャプタータイトル *",
+      "chapterTitlePlaceholder": "第1章：始まり",
+      "sourceContent": "原文コンテンツ",
+      "sourceContentPlaceholder": "原文テキストをここに貼り付け...",
+      "sourceContentHint": "エディターで後から追加することもできます",
+      "addButton": "チャプター追加"
+    },
+    "deleteDialog": {
+      "title": "チャプター削除",
+      "message": "<strong>{{title}}</strong>を削除してもよろしいですか？チャプターのすべてのセグメントと翻訳が完全に削除されます。",
+      "confirm": "削除",
+      "loading": "削除中..."
+    },
+    "card": {
+      "segments": "{{translated}} / {{total}} セグメント",
+      "translationStale": "翻訳が古い",
+      "continue": "続ける",
+      "translate": "翻訳",
+      "deleteTooltip": "チャプター削除"
+    }
+  }
+}

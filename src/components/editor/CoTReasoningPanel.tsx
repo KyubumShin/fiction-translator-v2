@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEditorStore } from "@/stores/editor-store";
 import { cn } from "@/lib/cn";
 import { api } from "@/api/tauri-bridge";
@@ -8,16 +9,15 @@ interface CoTReasoningPanelProps {
 }
 
 export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelProps) {
+  const { t } = useTranslation("editor");
   const { activeSegmentId, showReasoning, toggleReasoning, segmentMap } = useEditorStore();
   const useCoT = useEditorStore((s) => s.useCoT);
 
-  // Find batch_id for the active segment
   const activeSegment = activeSegmentId
     ? segmentMap.find((entry) => entry.segment_id === activeSegmentId)
     : null;
   const batchId = activeSegment?.batch_id;
 
-  // Fetch reasoning data when batch_id is available
   const { data: reasoningData } = useQuery({
     queryKey: ["batch-reasoning", batchId],
     queryFn: () => api.getBatchReasoning(batchId!),
@@ -35,10 +35,10 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
         className="w-full px-6 py-3 flex items-center justify-between text-sm font-medium hover:bg-accent/50 transition-colors"
       >
         <span className="flex items-center gap-2">
-          <span className="text-muted-foreground">Chain-of-Thought Reasoning</span>
+          <span className="text-muted-foreground">{t("cotPanel.title")}</span>
           {activeSegmentId && (
             <span className="text-xs text-muted-foreground/70">
-              (Segment #{activeSegmentId})
+              {t("cotPanel.segment", { id: activeSegmentId })}
             </span>
           )}
         </span>
@@ -56,23 +56,22 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
         <div className="px-6 py-4 space-y-4 text-sm border-t border-border/50">
           {!useCoT ? (
             <p className="text-muted-foreground italic">
-              Chain-of-Thought reasoning was not used for this translation.
-              Enable the CoT toggle and re-translate to see reasoning data.
+              {t("cotPanel.notUsed")}
             </p>
           ) : !batchId ? (
             <p className="text-muted-foreground italic">
-              Reasoning data is not available for this segment. It may not have been translated yet, or the translation did not include Chain-of-Thought reasoning.
+              {t("cotPanel.notAvailable")}
             </p>
           ) : !reasoningData?.found ? (
             <p className="text-muted-foreground italic">
-              No reasoning data found for batch #{batchId}. The translation pipeline may not have stored reasoning data for this batch.
+              {t("cotPanel.notFound", { batchId })}
             </p>
           ) : (
             <>
               {reasoningData.situation_summary && (
                 <div>
                   <h3 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground mb-2">
-                    Situation Summary
+                    {t("cotPanel.situationSummary")}
                   </h3>
                   <p className="text-foreground/90 leading-relaxed">{reasoningData.situation_summary}</p>
                 </div>
@@ -81,7 +80,7 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
               {reasoningData.character_events && typeof reasoningData.character_events === "object" && Object.keys(reasoningData.character_events).length > 0 && (
                 <div>
                   <h3 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground mb-2">
-                    Character Events
+                    {t("cotPanel.characterEvents")}
                   </h3>
                   <ul className="space-y-1">
                     {Object.entries(reasoningData.character_events).map(([character, events]) => (
@@ -96,7 +95,7 @@ export function CoTReasoningPanel({ chapterId: _chapterId }: CoTReasoningPanelPr
               {reasoningData.review_feedback && typeof reasoningData.review_feedback === "object" && Object.keys(reasoningData.review_feedback).length > 0 && (
                 <div>
                   <h3 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground mb-2">
-                    Review Feedback
+                    {t("cotPanel.reviewFeedback")}
                   </h3>
                   <div className="space-y-2">
                     {Object.entries(reasoningData.review_feedback).map(([key, value]) => (

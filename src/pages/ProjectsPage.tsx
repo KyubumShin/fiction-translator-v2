@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useProjects, useCreateProject, useDeleteProject } from "@/hooks/useProject";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from "@/components/ui/Dialog";
@@ -12,6 +13,7 @@ import { ProjectCard } from "@/components/project/ProjectCard";
 import type { Project } from "@/api/types";
 
 export function ProjectsPage() {
+  const { t } = useTranslation("projects");
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
   const createProject = useCreateProject();
@@ -67,7 +69,7 @@ export function ProjectsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground">Loading projects...</div>
+        <div className="text-muted-foreground">{t("loading")}</div>
       </div>
     );
   }
@@ -76,11 +78,11 @@ export function ProjectsPage() {
     <div className="container mx-auto p-8 max-w-7xl">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Projects</h1>
-          <p className="text-muted-foreground">Manage your translation projects</p>
+          <h1 className="text-4xl font-bold mb-2">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Button variant="primary" onClick={() => setIsDialogOpen(true)}>
-          + New Project
+          {t("newProject")}
         </Button>
       </div>
 
@@ -101,12 +103,12 @@ export function ProjectsPage() {
               />
             </svg>
           </div>
-          <h2 className="text-2xl font-semibold mb-2">No projects yet</h2>
+          <h2 className="text-2xl font-semibold mb-2">{t("empty.title")}</h2>
           <p className="text-muted-foreground mb-6 max-w-md">
-            Create your first translation project to get started with Fiction Translator
+            {t("empty.description")}
           </p>
           <Button variant="primary" onClick={() => setIsDialogOpen(true)}>
-            Create your first project
+            {t("empty.action")}
           </Button>
         </div>
       ) : (
@@ -124,14 +126,14 @@ export function ProjectsPage() {
 
       <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
         <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
+          <DialogTitle>{t("createDialog.title")}</DialogTitle>
         </DialogHeader>
         <DialogContent>
           <div className="space-y-4">
             <div>
-              <Label>Project Name *</Label>
+              <Label>{t("createDialog.projectName")}</Label>
               <Input
-                placeholder="My Translation Project"
+                placeholder={t("createDialog.projectNamePlaceholder")}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 autoFocus
@@ -139,9 +141,9 @@ export function ProjectsPage() {
             </div>
 
             <div>
-              <Label>Description</Label>
+              <Label>{t("createDialog.description")}</Label>
               <Textarea
-                placeholder="Brief description of the project..."
+                placeholder={t("createDialog.descriptionPlaceholder")}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
@@ -149,7 +151,7 @@ export function ProjectsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Source Language *</Label>
+                <Label>{t("createDialog.sourceLanguage")}</Label>
                 <Select
                   value={formData.source_language}
                   onChange={(e) => setFormData({ ...formData, source_language: e.target.value })}
@@ -163,7 +165,7 @@ export function ProjectsPage() {
               </div>
 
               <div>
-                <Label>Target Language *</Label>
+                <Label>{t("createDialog.targetLanguage")}</Label>
                 <Select
                   value={formData.target_language}
                   onChange={(e) => setFormData({ ...formData, target_language: e.target.value })}
@@ -178,9 +180,9 @@ export function ProjectsPage() {
             </div>
 
             <div>
-              <Label>Genre</Label>
+              <Label>{t("createDialog.genre")}</Label>
               <Input
-                placeholder="e.g., Fantasy, Romance, Sci-Fi"
+                placeholder={t("createDialog.genrePlaceholder")}
                 value={formData.genre}
                 onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
               />
@@ -189,7 +191,7 @@ export function ProjectsPage() {
         </DialogContent>
         <DialogFooter>
           <Button variant="secondary" size="sm" onClick={() => setIsDialogOpen(false)}>
-            Cancel
+            {t("common:cancel")}
           </Button>
           <Button
             variant="primary"
@@ -197,7 +199,7 @@ export function ProjectsPage() {
             onClick={handleCreate}
             disabled={!formData.name}
           >
-            Create Project
+            {t("createDialog.createButton")}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -206,10 +208,10 @@ export function ProjectsPage() {
         open={deletingProject !== null}
         onClose={() => setDeletingProject(null)}
         onConfirm={handleConfirmDelete}
-        title="Delete Project"
-        message={`Delete project "${deletingProject?.name}"? This will remove all chapters, translations, and glossary entries. This cannot be undone.`}
-        confirmLabel="Delete"
-        loadingLabel="Deleting..."
+        title={t("deleteDialog.title")}
+        message={t("deleteDialog.message", { name: deletingProject?.name })}
+        confirmLabel={t("deleteDialog.confirm")}
+        loadingLabel={t("deleteDialog.loading")}
         variant="destructive"
       />
     </div>

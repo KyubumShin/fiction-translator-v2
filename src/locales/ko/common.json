@@ -1,0 +1,33 @@
+{
+  "save": "저장",
+  "cancel": "취소",
+  "delete": "삭제",
+  "edit": "편집",
+  "add": "추가",
+  "update": "업데이트",
+  "create": "생성",
+  "back": "뒤로",
+  "loading": "로딩 중...",
+  "show": "보기",
+  "hide": "숨기기",
+  "test": "테스트",
+  "export": "내보내기",
+  "close": "닫기",
+  "actions": "작업",
+  "backToProjects": "\u2190 프로젝트 목록으로",
+  "noResultsFound": "검색 결과 없음",
+  "sidebar": {
+    "appName": "Fiction Translator",
+    "version": "v2.0",
+    "projects": "프로젝트",
+    "settings": "설정",
+    "recentProjects": "최근 프로젝트",
+    "sidecarConnected": "사이드카 연결됨"
+  },
+  "commandBar": {
+    "placeholder": "명령어 또는 검색어를 입력하세요...",
+    "goToProjects": "프로젝트로 이동",
+    "goToSettings": "설정으로 이동",
+    "openProject": "열기: {{name}}"
+  }
+}

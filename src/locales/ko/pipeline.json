@@ -1,0 +1,21 @@
+{
+  "translateButton": {
+    "translate": "번역",
+    "translating": "번역 중..."
+  },
+  "progressOverlay": {
+    "title": "챕터 번역 중",
+    "progress": "진행률",
+    "pipelineStages": "파이프라인 단계"
+  },
+  "stages": {
+    "load_context": "컨텍스트 로딩",
+    "segmentation": "세그먼트 분할",
+    "character_extraction": "캐릭터 추출",
+    "validation": "검증",
+    "translation": "번역",
+    "review": "리뷰",
+    "persona_learning": "페르소나 학습",
+    "finalize": "마무리"
+  }
+}

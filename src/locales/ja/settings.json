@@ -1,0 +1,47 @@
+{
+  "title": "設定",
+  "subtitle": "環境設定とAPIキーを管理します",
+  "appearance": {
+    "title": "外観",
+    "theme": "テーマ",
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
+  "language": {
+    "title": "言語",
+    "label": "インターフェース言語"
+  },
+  "apiKeys": {
+    "title": "LLM APIキー",
+    "subtitle": "翻訳プロバイダーのAPIキーを設定します",
+    "geminiLabel": "Google Gemini APIキー",
+    "claudeLabel": "Anthropic Claude APIキー",
+    "openaiLabel": "OpenAI APIキー",
+    "keyConfigured": "キー設定済み（新しいキーを入力して更新）",
+    "enterGeminiKey": "Gemini APIキーを入力",
+    "enterClaudeKey": "Claude APIキーを入力",
+    "enterOpenaiKey": "OpenAI APIキーを入力",
+    "testing": "テスト中...",
+    "saving": "保存中...",
+    "saveApiKeys": "APIキーを保存",
+    "connectionSuccess": "{{provider}}の接続に成功しました！",
+    "connectionFailed": "{{provider}}の接続に失敗しました: {{error}}",
+    "saveSuccess": "APIキーが正常に保存されました！",
+    "saveFailed": "APIキーの保存に失敗しました: {{error}}"
+  },
+  "defaultProvider": {
+    "title": "デフォルトLLMプロバイダー"
+  },
+  "defaultLanguages": {
+    "title": "デフォルト言語",
+    "sourceLanguage": "デフォルト原文言語",
+    "targetLanguage": "デフォルト翻訳言語"
+  },
+  "about": {
+    "title": "について",
+    "version": "バージョン",
+    "platform": "プラットフォーム",
+    "backend": "バックエンド"
+  }
+}

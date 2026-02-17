@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useProject, useUpdateProject, useDeleteProject } from "@/hooks/useProject";
 import { useCreateChapter } from "@/hooks/useChapter";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/cn";
 type Tab = "chapters" | "glossary" | "personas";
 
 export function ProjectPage() {
+  const { t } = useTranslation("project");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const projectId = id ? parseInt(id) : null;
@@ -89,7 +91,7 @@ export function ProjectPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground">Loading project...</div>
+        <div className="text-muted-foreground">{t("loading")}</div>
       </div>
     );
   }
@@ -97,18 +99,18 @@ export function ProjectPage() {
   if (!project) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <div className="text-muted-foreground mb-4">Project not found</div>
+        <div className="text-muted-foreground mb-4">{t("notFound")}</div>
         <Button variant="secondary" onClick={() => navigate("/")}>
-          Back to Projects
+          {t("common:backToProjects")}
         </Button>
       </div>
     );
   }
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "chapters", label: "Chapters" },
-    { id: "glossary", label: "Glossary" },
-    { id: "personas", label: "Personas" },
+    { id: "chapters", label: t("tabs.chapters") },
+    { id: "glossary", label: t("tabs.glossary") },
+    { id: "personas", label: t("tabs.personas") },
   ];
 
   return (
@@ -119,7 +121,7 @@ export function ProjectPage() {
             className="text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
             onClick={() => navigate("/")}
           >
-            ← Back to Projects
+            {t("common:backToProjects")}
           </button>
 
           <div className="flex items-start justify-between">
@@ -143,10 +145,10 @@ export function ProjectPage() {
 
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={handleEditProject}>
-                Edit Project
+                {t("editProject")}
               </Button>
               <Button variant="destructive" size="sm" onClick={handleDeleteProject}>
-                Delete
+                {t("common:delete")}
               </Button>
             </div>
           </div>
@@ -175,9 +177,9 @@ export function ProjectPage() {
           {activeTab === "chapters" && (
             <div className="h-full flex flex-col">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold">Chapters</h2>
+                <h2 className="text-2xl font-semibold">{t("chapters.title")}</h2>
                 <Button variant="primary" onClick={() => setIsAddChapterOpen(true)}>
-                  + Add Chapter
+                  {t("chapters.addChapter")}
                 </Button>
               </div>
               <div className="flex-1 overflow-auto">
@@ -202,14 +204,14 @@ export function ProjectPage() {
 
       <Dialog open={isAddChapterOpen} onClose={() => setIsAddChapterOpen(false)}>
         <DialogHeader>
-          <DialogTitle>Add Chapter</DialogTitle>
+          <DialogTitle>{t("chapters.addDialog.title")}</DialogTitle>
         </DialogHeader>
         <DialogContent>
           <div className="space-y-4">
             <div>
-              <Label>Chapter Title *</Label>
+              <Label>{t("chapters.addDialog.chapterTitle")}</Label>
               <Input
-                placeholder="Chapter 1: The Beginning"
+                placeholder={t("chapters.addDialog.chapterTitlePlaceholder")}
                 value={chapterForm.title}
                 onChange={(e) => setChapterForm({ ...chapterForm, title: e.target.value })}
                 autoFocus
@@ -217,22 +219,22 @@ export function ProjectPage() {
             </div>
 
             <div>
-              <Label>Source Content</Label>
+              <Label>{t("chapters.addDialog.sourceContent")}</Label>
               <Textarea
                 className="min-h-[200px] font-mono"
-                placeholder="Paste your source text here..."
+                placeholder={t("chapters.addDialog.sourceContentPlaceholder")}
                 value={chapterForm.source_content}
                 onChange={(e) => setChapterForm({ ...chapterForm, source_content: e.target.value })}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                You can also add content later in the editor
+                {t("chapters.addDialog.sourceContentHint")}
               </p>
             </div>
           </div>
         </DialogContent>
         <DialogFooter>
           <Button variant="secondary" size="sm" onClick={() => setIsAddChapterOpen(false)}>
-            Cancel
+            {t("common:cancel")}
           </Button>
           <Button
             variant="primary"
@@ -240,30 +242,30 @@ export function ProjectPage() {
             onClick={handleAddChapter}
             disabled={!chapterForm.title}
           >
-            Add Chapter
+            {t("chapters.addDialog.addButton")}
           </Button>
         </DialogFooter>
       </Dialog>
 
       <Dialog open={isEditProjectOpen} onClose={() => setIsEditProjectOpen(false)}>
         <DialogHeader>
-          <DialogTitle>Edit Project</DialogTitle>
+          <DialogTitle>{t("editDialog.title")}</DialogTitle>
         </DialogHeader>
         <DialogContent>
           <div className="space-y-4">
             <div>
-              <Label>Project Name *</Label>
+              <Label>{t("editDialog.projectName")}</Label>
               <Input
-                placeholder="My Translation Project"
+                placeholder={t("editDialog.projectNamePlaceholder")}
                 value={projectForm.name}
                 onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
               />
             </div>
 
             <div>
-              <Label>Description</Label>
+              <Label>{t("editDialog.description")}</Label>
               <Textarea
-                placeholder="Brief description of the project..."
+                placeholder={t("editDialog.descriptionPlaceholder")}
                 value={projectForm.description}
                 onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
               />
@@ -272,7 +274,7 @@ export function ProjectPage() {
         </DialogContent>
         <DialogFooter>
           <Button variant="secondary" size="sm" onClick={() => setIsEditProjectOpen(false)}>
-            Cancel
+            {t("common:cancel")}
           </Button>
           <Button
             variant="primary"
@@ -280,7 +282,7 @@ export function ProjectPage() {
             onClick={handleUpdateProject}
             disabled={!projectForm.name}
           >
-            Save Changes
+            {t("editDialog.saveChanges")}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -289,10 +291,10 @@ export function ProjectPage() {
         open={isDeleteConfirmOpen}
         onClose={() => setIsDeleteConfirmOpen(false)}
         onConfirm={handleConfirmDelete}
-        title="Delete Project"
-        message={`Delete project "${project?.name}"? This cannot be undone.`}
-        confirmLabel="Delete"
-        loadingLabel="Deleting..."
+        title={t("deleteDialog.title")}
+        message={t("deleteDialog.message", { name: project?.name })}
+        confirmLabel={t("deleteDialog.confirm")}
+        loadingLabel={t("deleteDialog.loading")}
         variant="destructive"
       />
     </div>

@@ -1,0 +1,33 @@
+{
+  "save": "保存",
+  "cancel": "キャンセル",
+  "delete": "削除",
+  "edit": "編集",
+  "add": "追加",
+  "update": "更新",
+  "create": "作成",
+  "back": "戻る",
+  "loading": "読み込み中...",
+  "show": "表示",
+  "hide": "非表示",
+  "test": "テスト",
+  "export": "エクスポート",
+  "close": "閉じる",
+  "actions": "操作",
+  "backToProjects": "\u2190 プロジェクト一覧へ",
+  "noResultsFound": "結果が見つかりません",
+  "sidebar": {
+    "appName": "Fiction Translator",
+    "version": "v2.0",
+    "projects": "プロジェクト",
+    "settings": "設定",
+    "recentProjects": "最近のプロジェクト",
+    "sidecarConnected": "サイドカー接続済み"
+  },
+  "commandBar": {
+    "placeholder": "コマンドまたは検索語を入力...",
+    "goToProjects": "プロジェクトへ移動",
+    "goToSettings": "設定へ移動",
+    "openProject": "開く: {{name}}"
+  }
+}

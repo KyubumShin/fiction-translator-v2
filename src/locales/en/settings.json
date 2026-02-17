@@ -1,0 +1,47 @@
+{
+  "title": "Settings",
+  "subtitle": "Configure your preferences and API keys",
+  "appearance": {
+    "title": "Appearance",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "title": "Language",
+    "label": "Interface Language"
+  },
+  "apiKeys": {
+    "title": "LLM API Keys",
+    "subtitle": "Configure your API keys for translation providers",
+    "geminiLabel": "Google Gemini API Key",
+    "claudeLabel": "Anthropic Claude API Key",
+    "openaiLabel": "OpenAI API Key",
+    "keyConfigured": "Key configured (enter new to update)",
+    "enterGeminiKey": "Enter your Gemini API key",
+    "enterClaudeKey": "Enter your Claude API key",
+    "enterOpenaiKey": "Enter your OpenAI API key",
+    "testing": "Testing...",
+    "saving": "Saving...",
+    "saveApiKeys": "Save API Keys",
+    "connectionSuccess": "{{provider}} connection successful!",
+    "connectionFailed": "{{provider}} connection failed: {{error}}",
+    "saveSuccess": "API keys saved successfully!",
+    "saveFailed": "Failed to save API keys: {{error}}"
+  },
+  "defaultProvider": {
+    "title": "Default LLM Provider"
+  },
+  "defaultLanguages": {
+    "title": "Default Languages",
+    "sourceLanguage": "Default Source Language",
+    "targetLanguage": "Default Target Language"
+  },
+  "about": {
+    "title": "About",
+    "version": "Version",
+    "platform": "Platform",
+    "backend": "Backend"
+  }
+}

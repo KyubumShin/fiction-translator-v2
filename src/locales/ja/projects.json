@@ -1,0 +1,34 @@
+{
+  "title": "プロジェクト",
+  "subtitle": "翻訳プロジェクトを管理します",
+  "newProject": "+ 新規プロジェクト",
+  "loading": "プロジェクトを読み込み中...",
+  "empty": {
+    "title": "プロジェクトがありません",
+    "description": "Fiction Translatorで最初の翻訳プロジェクトを作成しましょう",
+    "action": "最初のプロジェクトを作成"
+  },
+  "createDialog": {
+    "title": "新規プロジェクト作成",
+    "projectName": "プロジェクト名 *",
+    "projectNamePlaceholder": "翻訳プロジェクト",
+    "description": "説明",
+    "descriptionPlaceholder": "プロジェクトの簡単な説明...",
+    "sourceLanguage": "原文言語 *",
+    "targetLanguage": "翻訳言語 *",
+    "genre": "ジャンル",
+    "genrePlaceholder": "例：ファンタジー、ロマンス、SF",
+    "createButton": "プロジェクト作成"
+  },
+  "deleteDialog": {
+    "title": "プロジェクト削除",
+    "message": "プロジェクト「{{name}}」を削除しますか？すべてのチャプター、翻訳、用語集が削除されます。この操作は元に戻せません。",
+    "confirm": "削除",
+    "loading": "削除中..."
+  },
+  "card": {
+    "chapter_one": "{{count}}チャプター",
+    "chapter_other": "{{count}}チャプター",
+    "deleteTooltip": "プロジェクト削除"
+  }
+}

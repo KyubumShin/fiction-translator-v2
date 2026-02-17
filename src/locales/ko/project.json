@@ -1,0 +1,52 @@
+{
+  "loading": "프로젝트 로딩 중...",
+  "notFound": "프로젝트를 찾을 수 없습니다",
+  "tabs": {
+    "chapters": "챕터",
+    "glossary": "용어집",
+    "personas": "페르소나"
+  },
+  "editProject": "프로젝트 편집",
+  "editDialog": {
+    "title": "프로젝트 편집",
+    "projectName": "프로젝트 이름 *",
+    "projectNamePlaceholder": "나의 번역 프로젝트",
+    "description": "설명",
+    "descriptionPlaceholder": "프로젝트에 대한 간단한 설명...",
+    "saveChanges": "변경사항 저장"
+  },
+  "deleteDialog": {
+    "title": "프로젝트 삭제",
+    "message": "\"{{name}}\" 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "confirm": "삭제",
+    "loading": "삭제 중..."
+  },
+  "chapters": {
+    "title": "챕터",
+    "addChapter": "+ 챕터 추가",
+    "empty": "챕터가 없습니다.",
+    "emptyHint": "첫 번째 챕터를 추가하여 시작하세요.",
+    "addDialog": {
+      "title": "챕터 추가",
+      "chapterTitle": "챕터 제목 *",
+      "chapterTitlePlaceholder": "제1장: 시작",
+      "sourceContent": "원문 내용",
+      "sourceContentPlaceholder": "원문 텍스트를 여기에 붙여넣으세요...",
+      "sourceContentHint": "에디터에서 나중에 추가할 수도 있습니다",
+      "addButton": "챕터 추가"
+    },
+    "deleteDialog": {
+      "title": "챕터 삭제",
+      "message": "<strong>{{title}}</strong>을(를) 삭제하시겠습니까? 챕터의 모든 세그먼트와 번역이 영구적으로 삭제됩니다.",
+      "confirm": "삭제",
+      "loading": "삭제 중..."
+    },
+    "card": {
+      "segments": "{{translated}} / {{total}} 세그먼트",
+      "translationStale": "번역 갱신 필요",
+      "continue": "계속",
+      "translate": "번역",
+      "deleteTooltip": "챕터 삭제"
+    }
+  }
+}
