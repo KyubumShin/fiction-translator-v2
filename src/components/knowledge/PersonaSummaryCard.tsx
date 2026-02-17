@@ -6,9 +6,10 @@ interface PersonaSummaryCardProps {
   persona: Persona;
   onEdit: () => void;
   onDelete: () => void;
+  onShowGraph?: () => void;
 }
 
-export function PersonaSummaryCard({ persona, onEdit, onDelete }: PersonaSummaryCardProps) {
+export function PersonaSummaryCard({ persona, onEdit, onDelete, onShowGraph }: PersonaSummaryCardProps) {
   const getFormalityLabel = (level: number) => {
     if (level <= 2) return "Very Casual";
     if (level <= 4) return "Casual";
@@ -49,9 +50,23 @@ export function PersonaSummaryCard({ persona, onEdit, onDelete }: PersonaSummary
               Auto
             </span>
           )}
+          {onShowGraph && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onShowGraph(); }}
+              className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+              title="Show relationships"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="6" cy="6" r="2.5" strokeWidth={1.5} />
+                <circle cx="18" cy="6" r="2.5" strokeWidth={1.5} />
+                <circle cx="12" cy="18" r="2.5" strokeWidth={1.5} />
+                <path strokeLinecap="round" strokeWidth={1.5} d="M8 7.5l4 8.5M16 7.5l-4 8.5M8.5 6h7" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             title="Delete persona"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

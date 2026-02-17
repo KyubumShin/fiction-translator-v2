@@ -109,23 +109,30 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
       <div className="p-4 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold">Character Personas</h2>
-          <button
-            onClick={() => setView(view === "list" ? "graph" : "list")}
-            className={cn(
-              "p-1.5 rounded-lg transition-colors",
-              view === "graph"
-                ? "text-primary bg-primary/10"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-            title={view === "list" ? "Show relationship graph" : "Show list view"}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="6" cy="6" r="2.5" strokeWidth={1.5} />
-              <circle cx="18" cy="6" r="2.5" strokeWidth={1.5} />
-              <circle cx="12" cy="18" r="2.5" strokeWidth={1.5} />
-              <path strokeLinecap="round" strokeWidth={1.5} d="M8 7.5l4 8.5M16 7.5l-4 8.5M8.5 6h7" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-1 rounded-lg bg-secondary p-0.5">
+            <button
+              onClick={() => setView("list")}
+              className={cn(
+                "px-3 py-1 rounded-md text-sm font-medium transition-colors",
+                view === "list"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setView("graph")}
+              className={cn(
+                "px-3 py-1 rounded-md text-sm font-medium transition-colors",
+                view === "graph"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Graph
+            </button>
+          </div>
         </div>
         <Button variant="primary" size="sm" onClick={handleAdd}>
           + Add Persona
@@ -147,6 +154,7 @@ export function PersonaPanel({ projectId, sourceLanguage }: PersonaPanelProps) {
                   persona={persona}
                   onEdit={() => handleEdit(persona)}
                   onDelete={() => handleDeleteRequest(persona.id)}
+                  onShowGraph={() => setView("graph")}
                 />
               ))}
             </div>

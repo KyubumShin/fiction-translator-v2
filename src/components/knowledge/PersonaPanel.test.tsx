@@ -67,7 +67,7 @@ describe("PersonaPanel", () => {
     expect(screen.getByText("No personas yet.")).toBeInTheDocument();
   });
 
-  it("has a graph toggle icon button", () => {
+  it("has List and Graph text toggle buttons", () => {
     (usePersonas as any).mockReturnValue({
       data: [makePersona(1, "Alice")],
       isLoading: false,
@@ -75,10 +75,11 @@ describe("PersonaPanel", () => {
 
     render(<PersonaPanel projectId={1} />);
 
-    expect(screen.getByTitle("Show relationship graph")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "List" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Graph" })).toBeInTheDocument();
   });
 
-  it("toggles to graph view when graph icon is clicked", async () => {
+  it("toggles to graph view when Graph button is clicked", async () => {
     const user = userEvent.setup();
     (usePersonas as any).mockReturnValue({
       data: [makePersona(1, "Alice"), makePersona(2, "Bob")],
@@ -87,13 +88,9 @@ describe("PersonaPanel", () => {
 
     render(<PersonaPanel projectId={1} />);
 
-    // Click graph icon
-    await user.click(screen.getByTitle("Show relationship graph"));
+    await user.click(screen.getByRole("button", { name: "Graph" }));
 
-    // Should show graph view
     expect(screen.getByTestId("relationship-graph")).toBeInTheDocument();
-    // Title should change to "Show list view"
-    expect(screen.getByTitle("Show list view")).toBeInTheDocument();
   });
 
   it("toggles back to list view", async () => {
@@ -106,16 +103,29 @@ describe("PersonaPanel", () => {
     render(<PersonaPanel projectId={1} />);
 
     // Toggle to graph
-    await user.click(screen.getByTitle("Show relationship graph"));
+    await user.click(screen.getByRole("button", { name: "Graph" }));
     expect(screen.getByTestId("relationship-graph")).toBeInTheDocument();
 
     // Toggle back to list
-    await user.click(screen.getByTitle("Show list view"));
+    await user.click(screen.getByRole("button", { name: "List" }));
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
   });
 
-  it("graph icon button has no 'Graph' text label", () => {
+  it("each persona card has a graph icon button", () => {
+    (usePersonas as any).mockReturnValue({
+      data: [makePersona(1, "Alice"), makePersona(2, "Bob")],
+      isLoading: false,
+    });
+
+    render(<PersonaPanel projectId={1} />);
+
+    const graphButtons = screen.getAllByTitle("Show relationships");
+    expect(graphButtons).toHaveLength(2);
+  });
+
+  it("card graph icon switches to graph view", async () => {
+    const user = userEvent.setup();
     (usePersonas as any).mockReturnValue({
       data: [makePersona(1, "Alice")],
       isLoading: false,
@@ -123,9 +133,7 @@ describe("PersonaPanel", () => {
 
     render(<PersonaPanel projectId={1} />);
 
-    // Should NOT have a button with text "Graph"
-    expect(screen.queryByRole("button", { name: "Graph" })).not.toBeInTheDocument();
-    // Should NOT have text "List" button either
-    expect(screen.queryByRole("button", { name: "List" })).not.toBeInTheDocument();
+    await user.click(screen.getByTitle("Show relationships"));
+    expect(screen.getByTestId("relationship-graph")).toBeInTheDocument();
   });
 });
