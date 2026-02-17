@@ -105,7 +105,8 @@ async def translator_node(state: TranslationState) -> dict:
 
     all_batches: list[BatchData] = []
     new_translations: list[TranslatedSegment] = []
-    all_unknown_terms: list[dict] = []
+    # Preserve unknown terms from previous iterations (review loop)
+    all_unknown_terms: list[dict] = list(state.get("unknown_terms", []))
     total_tokens = state.get("total_tokens", 0)
     total_cost = state.get("total_cost", 0.0)
 
@@ -256,6 +257,11 @@ async def translator_node(state: TranslationState) -> dict:
         for term in unknown_terms_raw:
             if term.get("source_term") and term.get("translated_term"):
                 all_unknown_terms.append(term)
+
+        logger.debug(
+            "Batch %d: %d unknown terms extracted (total so far: %d)",
+            batch_idx, len(unknown_terms_raw), len(all_unknown_terms),
+        )
 
         # Store batch data
         all_batches.append(BatchData(

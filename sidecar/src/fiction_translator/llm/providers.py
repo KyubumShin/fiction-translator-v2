@@ -100,6 +100,14 @@ class LLMProvider(ABC):
 
         text = response.text.strip()
 
+        # Log raw LLM response for debugging
+        logger.debug(
+            "LLM response [model=%s, tokens=%s]: %s",
+            response.model,
+            response.usage,
+            text[:2000] + ("..." if len(text) > 2000 else ""),
+        )
+
         # Handle markdown code blocks
         if text.startswith("```json"):
             text = text[7:]
@@ -109,11 +117,21 @@ class LLMProvider(ABC):
             text = text[:-3]
 
         try:
-            return json.loads(text.strip())
+            parsed = json.loads(text.strip())
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON from LLM response: {e}")
-            logger.debug(f"Raw response: {response.text}")
+            logger.error("Failed to parse JSON from LLM response: %s", e)
+            logger.error("Raw response text: %s", response.text)
             raise ValueError(f"LLM did not return valid JSON: {e}") from e
+
+        # Log parsed keys for quick debugging
+        if isinstance(parsed, dict):
+            summary = {
+                k: len(v) if isinstance(v, list) else type(v).__name__
+                for k, v in parsed.items()
+            }
+            logger.debug("Parsed JSON keys: %s", summary)
+
+        return parsed
 
     @abstractmethod
     def is_available(self) -> bool:

@@ -1,20 +1,24 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useProjects, useCreateProject } from "@/hooks/useProject";
+import { useProjects, useCreateProject, useDeleteProject } from "@/hooks/useProject";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ProjectCard } from "@/components/project/ProjectCard";
+import type { Project } from "@/api/types";
 
 export function ProjectsPage() {
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
   const createProject = useCreateProject();
+  const deleteProject = useDeleteProject();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -52,6 +56,12 @@ export function ProjectsPage() {
     setIsDialogOpen(false);
     setFormData({ name: "", description: "", source_language: "ko", target_language: "en", genre: "" });
     navigate(`/project/${(result as any).id}`);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingProject) return;
+    await deleteProject.mutateAsync(deletingProject.id);
+    setDeletingProject(null);
   };
 
   if (isLoading) {
@@ -106,6 +116,7 @@ export function ProjectsPage() {
               key={project.id}
               project={project}
               onClick={() => navigate(`/project/${project.id}`)}
+              onDelete={() => setDeletingProject(project)}
             />
           ))}
         </div>
@@ -190,6 +201,17 @@ export function ProjectsPage() {
           </Button>
         </DialogFooter>
       </Dialog>
+
+      <ConfirmDialog
+        open={deletingProject !== null}
+        onClose={() => setDeletingProject(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Project"
+        message={`Delete project "${deletingProject?.name}"? This will remove all chapters, translations, and glossary entries. This cannot be undone.`}
+        confirmLabel="Delete"
+        loadingLabel="Deleting..."
+        variant="destructive"
+      />
     </div>
   );
 }

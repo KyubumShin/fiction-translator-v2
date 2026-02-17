@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -100,11 +100,11 @@ export function RelationshipGraph({ projectId, personas, onEditPersona }: Relati
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Sync when data changes
-  useMemo(() => {
+  useEffect(() => {
     setNodes(buildNodes(personas));
   }, [personas, setNodes]);
 
-  useMemo(() => {
+  useEffect(() => {
     setEdges(buildEdges(relationships, handleEditRelationship));
   }, [relationships, handleEditRelationship, setEdges]);
 
