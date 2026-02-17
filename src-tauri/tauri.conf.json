@@ -1,6 +1,6 @@
 {
   "productName": "Fiction Translator",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "com.fiction-translator.v2",
   "build": {
     "beforeDevCommand": "npm run dev",
