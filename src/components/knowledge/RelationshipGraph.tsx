@@ -186,6 +186,16 @@ export function RelationshipGraph({ projectId, personas, onEditPersona }: Relati
     );
   }
 
+  if (personas.length === 1) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        <p>Add one more persona to create relationships.</p>
+      </div>
+    );
+  }
+
+  const hasRelationships = relationships.length > 0;
+
   return (
     <div className="flex-1 relative">
       <div className="absolute top-2 right-2 z-10">
@@ -193,6 +203,21 @@ export function RelationshipGraph({ projectId, personas, onEditPersona }: Relati
           + Add Relationship
         </Button>
       </div>
+
+      {!hasRelationships && (
+        <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none">
+          <div className="bg-background/80 backdrop-blur-sm rounded-xl border border-border p-6 text-center max-w-sm pointer-events-auto">
+            <p className="text-sm font-medium mb-2">No relationships yet</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              Drag from one character node to another, or use the button below to connect them.
+            </p>
+            <Button variant="primary" size="sm" onClick={handleAddRelationship}>
+              + Add Relationship
+            </Button>
+          </div>
+        </div>
+      )}
+
       <ReactFlow
         nodes={nodes}
         edges={edges}

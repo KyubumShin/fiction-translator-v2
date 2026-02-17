@@ -63,7 +63,7 @@ export function RelationshipEdgeDialog({
     }
   }, [relationship, personas]);
 
-  const isEditing = relationship !== null;
+  const isEditing = relationship !== null && relationship.id > 0;
   const canSave = personaId1 > 0 && personaId2 > 0 && personaId1 !== personaId2;
 
   const handleSave = () => {
