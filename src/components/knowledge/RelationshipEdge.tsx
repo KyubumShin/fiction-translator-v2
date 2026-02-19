@@ -1,4 +1,5 @@
 import { type EdgeProps, BaseEdge, EdgeLabelRenderer, getBezierPath } from "@xyflow/react";
+import { useTranslation } from "react-i18next";
 
 const TYPE_COLORS: Record<string, string> = {
   romantic: "#e11d48",
@@ -30,6 +31,7 @@ export function RelationshipEdge({
   targetPosition,
   data,
 }: EdgeProps) {
+  const { t } = useTranslation("knowledge");
   const edgeData = data as RelationshipEdgeData | undefined;
   const type = edgeData?.relationship_type ?? "acquaintance";
   const intimacy = edgeData?.intimacy_level ?? 5;
@@ -64,7 +66,7 @@ export function RelationshipEdge({
           }}
           onClick={() => edgeData?.onEdit(edgeData.relationship_id)}
         >
-          {type}
+          {t(`relationshipDialog.${type}`, type)}
         </button>
       </EdgeLabelRenderer>
     </>
